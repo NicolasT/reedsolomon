@@ -1,10 +1,13 @@
+> module Main (main) where
+
 //+build ignore
 
 // Copyright 2015, Klaus Post, see LICENSE for details.
 //
-// Simple decoder example.
+// Simple encoder example
 //
-// The decoder reverses the process of "simple-encoder.go"
+// The encoder encodes a simgle file into a number of shards
+// To reverse the process see "simpledecoder.go"
 //
 // To build an executable use:
 //
@@ -39,83 +42,72 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/klauspost/reedsolomon"
 )
 
-var dataShards = flag.Int("data", 4, "Number of shards to split the data into")
+var dataShards = flag.Int("data", 4, "Number of shards to split the data into, must be below 257.")
 var parShards = flag.Int("par", 2, "Number of parity shards")
-var outFile = flag.String("out", "", "Alternative output path/file")
+var outDir = flag.String("out", "", "Alternative output directory")
 
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  simple-decoder [-flags] basefile.ext\nDo not add the number to the filename.\n")
+		fmt.Fprintf(os.Stderr, "  simple-encoder [-flags] filename.ext\n\n")
 		fmt.Fprintf(os.Stderr, "Valid flags:\n")
 		flag.PrintDefaults()
 	}
 }
 
 func main() {
-	// Parse flags
+	// Parse command line parameters.
 	flag.Parse()
 	args := flag.Args()
 	if len(args) != 1 {
-		fmt.Fprintf(os.Stderr, "Error: No filenames given\n")
+		fmt.Fprintf(os.Stderr, "Error: No input filename given\n")
 		flag.Usage()
+		os.Exit(1)
+	}
+	if *dataShards > 257 {
+		fmt.Fprintf(os.Stderr, "Error: Too many data shards\n")
 		os.Exit(1)
 	}
 	fname := args[0]
 
-	// Create matrix
+	// Create encoding matrix.
 	enc, err := reedsolomon.New(*dataShards, *parShards)
 	checkErr(err)
 
-	// Create shards and load the data.
-	shards := make([][]byte, *dataShards+*parShards)
-	for i := range shards {
-		infn := fmt.Sprintf("%s.%d", fname, i)
-		fmt.Println("Opening", infn)
-		shards[i], err = ioutil.ReadFile(infn)
-		if err != nil {
-			fmt.Println("Error reading file", err)
-			shards[i] = nil
-		}
-	}
+	fmt.Println("Opening", fname)
+	b, err := ioutil.ReadFile(fname)
+	checkErr(err)
 
-	// Verify the shards
-	ok, err := enc.Verify(shards)
-	if ok {
-		fmt.Println("No reconstruction needed")
-	} else {
-		fmt.Println("Verification failed. Reconstructing data")
-		err = enc.Reconstruct(shards)
-		if err != nil {
-			fmt.Println("Reconstruct failed -", err)
-			os.Exit(1)
-		}
-		ok, err = enc.Verify(shards)
-		if !ok {
-			fmt.Println("Verification failed after reconstruction, data likely corrupted.")
-			os.Exit(1)
-		}
+	// Split the file into equally sized shards.
+	shards, err := enc.Split(b)
+	checkErr(err)
+	fmt.Printf("File split into %d data+parity shards with %d bytes/shard.\n", len(shards), len(shards[0]))
+
+	// Encode parity
+	err = enc.Encode(shards)
+	checkErr(err)
+
+	// Write out the resulting files.
+	dir, file := filepath.Split(fname)
+	if *outDir != "" {
+		dir = *outDir
+	}
+	for i, shard := range shards {
+		outfn := fmt.Sprintf("%s.%d", file, i)
+
+		fmt.Println("Writing to", outfn)
+		err = ioutil.WriteFile(filepath.Join(dir, outfn), shard, os.ModePerm)
 		checkErr(err)
 	}
-
-	// Join the shards and write them
-	outfn := *outFile
-	if outfn == "" {
-		outfn = fname
-	}
-
-	fmt.Println("Writing data to", outfn)
-	f, err := os.Create(outfn)
-	checkErr(err)
-
-	// We don't know the exact filesize.
-	err = enc.Join(f, shards, len(shards[0])**dataShards)
-	checkErr(err)
 }
+
+> main :: IO ()
+> main = error "Not implemented"
 
 func checkErr(err error) {
 	if err != nil {

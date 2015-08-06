@@ -1,3 +1,7 @@
+> module Matrix (tests) where
+>
+> import Test.Tasty (TestTree, testGroup)
+
 /**
  * Unit tests for Matrix
  *
@@ -97,3 +101,6 @@ func TestMatrixInverse2(t *testing.T) {
 		t.Fatal(str, "!=", expect)
 	}
 }
+
+> tests :: TestTree
+> tests = testGroup "Matrix" []

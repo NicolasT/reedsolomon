@@ -1,3 +1,6 @@
+> module Data.ReedSolomon.Galois.Amd64 (
+>     ) where
+
 //+build !noasm
 //+build !appengine
 

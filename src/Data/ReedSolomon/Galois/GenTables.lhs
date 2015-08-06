@@ -1,3 +1,6 @@
+> module Data.ReedSolomon.Galois.GenTables (
+>     ) where
+
 //+build ignore
 
 package main

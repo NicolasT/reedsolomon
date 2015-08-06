@@ -1,3 +1,6 @@
+> module Data.ReedSolomon.Galois (
+>     ) where
+
 /**
  * 8-bit Galois Field
  * Copyright 2015, Klaus Post

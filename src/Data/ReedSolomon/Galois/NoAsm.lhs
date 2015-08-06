@@ -1,3 +1,6 @@
+> module Data.ReedSolomon.Galois.NoAsm (
+>     ) where
+
 //+build !amd64 noasm appengine
 
 // Copyright 2015, Klaus Post, see LICENSE for details.

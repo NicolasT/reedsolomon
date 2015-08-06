@@ -10,13 +10,14 @@ since there is a number of shotcomings noted below.
 
 To build an executable use:
 
-```bash 
-go build simple-decoder.go
-go build simple-encoder.go
+```bash
+stack build
 ```
 
+in the parent directory.
+
 ## Shortcomings
-* If the file size of the input isn't diviable by the number of data shards
+* If the file size of the input isn't dividable by the number of data shards
   the output will contain extra zeroes
 * If the shard numbers isn't the same for the decoder as in the
   encoder, invalid output will be generated.
@@ -31,4 +32,4 @@ The solution for this is to save a metadata file containing:
 * HASH of each shard.
 * Order of the shards.
 
-If you save these properties, you should abe able to detect file corruption in a shard and be able to reconstruct your data if you have the needed number of shards left.
+If you save these properties, you should be able to detect file corruption in a shard and be able to reconstruct your data if you have the needed number of shards left.

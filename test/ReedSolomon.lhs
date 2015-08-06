@@ -1,3 +1,7 @@
+> module ReedSolomon (tests) where
+>
+> import Test.Tasty (TestTree, testGroup)
+
 /**
  * Unit tests for ReedSolomon
  *
@@ -537,3 +541,6 @@ func TestAllMatrices(t *testing.T) {
 		}
 	}
 }
+
+> tests :: TestTree
+> tests = testGroup "ReedSolomon" []

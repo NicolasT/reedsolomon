@@ -1,3 +1,6 @@
+> module Data.ReedSolomon.Matrix (
+>     ) where
+
 /**
  * Matrix Algebra over an 8-bit Galois Field
  *

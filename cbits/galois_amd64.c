@@ -5,6 +5,7 @@
 // Based on http://www.snia.org/sites/default/files2/SDC2013/presentations/NewThinking/EthanMiller_Screaming_Fast_Galois_Field%20Arithmetic_SIMD%20Instructions.pdf
 // and http://jerasure.org/jerasure/gf-complete/tree/master
 
+/*
 // func galMulSSSE3Xor(low, high, in, out []byte)
 TEXT ·galMulSSSE3Xor(SB), 7, $0
     MOVQ    low+0(FP),SI        // SI: &low
@@ -41,7 +42,9 @@ loopback_xor:
     JNZ     loopback_xor
 done_xor:
     RET
+*/
 
+/*
 // func galMulSSSE3(low, high, in, out []byte)
 TEXT ·galMulSSSE3(SB), 7, $0
     MOVQ    low+0(FP),SI        // SI: &low
@@ -76,5 +79,5 @@ loopback:
     JNZ     loopback
 done:
     RET
-
+*/
 

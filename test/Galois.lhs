@@ -1,3 +1,7 @@
+> module Galois (tests) where
+>
+> import Test.Tasty (TestTree, testGroup)
+
 /**
  * Unit tests for Galois
  *
@@ -153,3 +157,6 @@ func TestGalois(t *testing.T) {
 		t.Fatal("galExp(13, 7) != 43")
 	}
 }
+
+> tests :: TestTree
+> tests = testGroup "Galois" []

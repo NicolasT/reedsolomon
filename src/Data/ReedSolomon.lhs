@@ -1,3 +1,6 @@
+> module Data.ReedSolomon (
+>     ) where
+
 /**
  * Reed-Solomon Coding over 8-bit values.
  *

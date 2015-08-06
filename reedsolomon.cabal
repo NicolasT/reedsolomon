@@ -1,0 +1,80 @@
+Name:                reedsolomon
+Version:             0.0.0.0
+Synopsis:            Reed-Solomon Erasure Coding in Haskell
+Description:         Please see README.md
+Homepage:            http://github.com/NicolasT/reedsolomon
+License:             MIT
+License-File:        LICENSE
+Author:              Nicolas Trangez
+Maintainer:          ikke@nicolast.be
+Copyright:
+    (c) 2015, Nicolas Trangez
+    (c) 2015, Klaus Post
+    (c) 2015, Backblaze
+Category:            Data
+Build-Type:          Simple
+Extra-Source-Files:  README.md
+                   , stack.yaml
+Cabal-Version:       >=1.10
+
+Library
+  Hs-Source-Dirs:      src
+  Exposed-Modules:     Data.ReedSolomon
+  Other-Modules:       Data.ReedSolomon.Galois
+                     , Data.ReedSolomon.Galois.Amd64
+                     , Data.ReedSolomon.Galois.GenTables
+                     , Data.ReedSolomon.Galois.NoAsm
+                     , Data.ReedSolomon.Matrix
+  C-Sources:           cbits/galois_amd64.c
+  Build-Depends:       base >= 4.8 && < 4.9
+  Default-Language:    Haskell2010
+  Ghc-Options:         -O2 -fllvm -g
+  Ghc-Prof-Options:    -fprof-auto
+  Cc-Options:          -O3 -funroll-all-loops -mavx -ggdb3 -Wall -Wextra
+
+Executable reedsolomon-simple-encoder
+  Hs-Source-Dirs:      examples
+  Main-Is:             simple-encoder.lhs
+  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
+  Build-Depends:       base
+                     , reedsolomon
+  Default-Language:    Haskell2010
+
+Executable reedsolomon-simple-decoder
+  Hs-Source-Dirs:      examples
+  Main-Is:             simple-decoder.lhs
+  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
+  Build-Depends:       base
+                     , reedsolomon
+  Default-Language:    Haskell2010
+
+Test-Suite reedsolomon-test
+  Type:                exitcode-stdio-1.0
+  Hs-Source-Dirs:      test
+                     , src
+  Main-Is:             Main.hs
+  Other-Modules:       Galois
+                     , Matrix
+                     , ReedSolomon
+  Build-Depends:       base
+                     , tasty >= 0.10 && < 0.11
+                     , reedsolomon
+  Default-Language:    Haskell2010
+  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -O2 -fllvm -g
+  Ghc-Prof-Options:    -fprof-auto
+
+Benchmark reedsolomon-bench
+  Type:                exitcode-stdio-1.0
+  Hs-Source-Dirs:      bench
+                     , src
+  Main-Is:             Main.hs
+  Build-Depends:       base
+                     , criterion >= 1.1 && < 1.2
+                     , reedsolomon
+  Default-Language:    Haskell2010
+  Ghc-Options:         -rtsopts -O2 -fllvm -g
+  Ghc-Prof-Options:    -fprof-auto
+
+Source-Repository head
+  Type:     git
+  Location: https://github.com/NicolasT/reedsolomon.git
