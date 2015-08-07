@@ -1,3 +1,9 @@
+/* Copyright 2015, Nicolas Trangez, see LICENSE for details. */
+
+#include <inttypes.h>
+#include <sys/types.h>
+#include <x86intrin.h>
+
 //+build !noasm !appengine
 
 // Copyright 2015, Klaus Post, see LICENSE for details.
@@ -44,6 +50,37 @@ done_xor:
     RET
 */
 
+void galMulSSSE3Xor(const __m128i *restrict low, const __m128i *restrict high, const uint8_t *restrict in, uint8_t *restrict out, const size_t len) __attribute__((hot)) __attribute__((nonnull));
+void galMulSSSE3Xor(const __m128i *restrict low, const __m128i *restrict high, const uint8_t *restrict in, uint8_t *restrict out, const size_t len) {
+        const __m128i low_mask_unpacked = _mm_set1_epi8(0x0f),
+                      low_vector = _mm_loadu_si128(low),
+                      high_vector = _mm_loadu_si128(high);
+        __m128i in_x = { 0 },
+                high_input = { 0 },
+                low_input = { 0 },
+                mul_low_part = { 0 },
+                mul_high_part = { 0 },
+                result = { 0 },
+                out_x = { 0 };
+        unsigned int x = len / 16;
+
+        while(x > 0) {
+                in_x = _mm_load_si128((const __m128i *)in);
+                high_input = _mm_srli_epi64(in_x, 4);
+                low_input = _mm_and_si128(low_mask_unpacked, in_x);
+                high_input = _mm_and_si128(low_mask_unpacked, high_input);
+                mul_low_part = _mm_shuffle_epi8(low_vector, low_input);
+                mul_high_part = _mm_shuffle_epi8(high_vector, high_input);
+                result = _mm_xor_si128(mul_low_part, mul_high_part);
+                out_x = _mm_load_si128((__m128i *)out);
+                result = _mm_xor_si128(result, out_x);
+                _mm_store_si128((__m128i *)out, result);
+                in += 16;
+                out += 16;
+                x--;
+        }
+}
+
 /*
 // func galMulSSSE3(low, high, in, out []byte)
 TEXT ·galMulSSSE3(SB), 7, $0
@@ -79,5 +116,33 @@ loopback:
     JNZ     loopback
 done:
     RET
+
 */
 
+void galMulSSSE3(const __m128i *restrict low, const __m128i *restrict high, const uint8_t *restrict in, uint8_t *restrict out, const size_t len) __attribute__((hot)) __attribute__((nonnull));
+void galMulSSSE3(const __m128i *restrict low, const __m128i *restrict high, const uint8_t *restrict in, uint8_t *restrict out, const size_t len) {
+        const __m128i low_mask_unpacked = _mm_set1_epi8(0x0f),
+                      low_vector = _mm_loadu_si128(low),
+                      high_vector = _mm_loadu_si128(high);
+        __m128i in_x = { 0 },
+                high_input = { 0 },
+                low_input = { 0 },
+                mul_low_part = { 0 },
+                mul_high_part = { 0 },
+                result = { 0 };
+        unsigned int x = len / 16;
+
+        while(x > 0) {
+                in_x = _mm_load_si128((const __m128i *)in);
+                high_input = _mm_srli_epi64(in_x, 4);
+                low_input = _mm_and_si128(low_mask_unpacked, in_x);
+                high_input = _mm_and_si128(low_mask_unpacked, high_input);
+                mul_low_part = _mm_shuffle_epi8(low_vector, low_input);
+                mul_high_part = _mm_shuffle_epi8(high_vector, high_input);
+                result = _mm_xor_si128(mul_low_part, mul_high_part);
+                _mm_store_si128((__m128i *)out, result);
+                in += 16;
+                out += 16;
+                x--;
+        }
+}

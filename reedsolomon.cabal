@@ -14,6 +14,7 @@ Copyright:
 Category:            Data
 Build-Type:          Simple
 Extra-Source-Files:  README.md
+                   , examples/README.md
                    , stack.yaml
 Cabal-Version:       >=1.10
 
@@ -27,8 +28,11 @@ Library
                      , Data.ReedSolomon.Matrix
   C-Sources:           cbits/galois_amd64.c
   Build-Depends:       base >= 4.8 && < 4.9
+                     , vector >= 0.10 && < 0.11
+                     , loop >= 0.2 && < 0.3
+                     , primitive >= 0.6 && < 0.7
   Default-Language:    Haskell2010
-  Ghc-Options:         -O2 -fllvm -g
+  Ghc-Options:         -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
   Cc-Options:          -O3 -funroll-all-loops -mavx -ggdb3 -Wall -Wextra
 
@@ -57,10 +61,15 @@ Test-Suite reedsolomon-test
                      , Matrix
                      , ReedSolomon
   Build-Depends:       base
+                     , vector
+                     , loop
+                     , primitive
                      , tasty >= 0.10 && < 0.11
+                     , tasty-hunit > 0.9 && < 0.10
+                     , tasty-quickcheck >= 0.8 && < 0.9
                      , reedsolomon
   Default-Language:    Haskell2010
-  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -O2 -fllvm -g
+  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
 
 Benchmark reedsolomon-bench
@@ -69,10 +78,13 @@ Benchmark reedsolomon-bench
                      , src
   Main-Is:             Main.hs
   Build-Depends:       base
+                     , vector
+                     , loop
+                     , primitive
                      , criterion >= 1.1 && < 1.2
                      , reedsolomon
   Default-Language:    Haskell2010
-  Ghc-Options:         -rtsopts -O2 -fllvm -g
+  Ghc-Options:         -rtsopts -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
 
 Source-Repository head
