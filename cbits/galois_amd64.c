@@ -62,7 +62,7 @@ void galMulSSSE3Xor(const __m128i *restrict low, const __m128i *restrict high, c
                 mul_high_part = { 0 },
                 result = { 0 },
                 out_x = { 0 };
-        unsigned int x = len / 16;
+        size_t x = len / 16;
 
         while(x > 0) {
                 in_x = _mm_load_si128((const __m128i *)in);
@@ -130,7 +130,7 @@ void galMulSSSE3(const __m128i *restrict low, const __m128i *restrict high, cons
                 mul_low_part = { 0 },
                 mul_high_part = { 0 },
                 result = { 0 };
-        unsigned int x = len / 16;
+        size_t x = len / 16;
 
         while(x > 0) {
                 in_x = _mm_load_si128((const __m128i *)in);
