@@ -128,12 +128,10 @@ func galMulSliceXor(c byte, in, out []byte) {
 >            -> m ()
 > cProtoToST inner low high in_ out@(MV.MVector ol op) = do
 >     let len = fromIntegral $ min (V.length in_) (MV.length out)
->         thawToPtr :: V.Storable a => V.Vector a -> (Ptr a -> IO b) -> IO b
->         thawToPtr v f = V.unsafeThaw v >>= flip MV.unsafeWith f
 >     unsafePrimToPrim $ -- TODO Safe?
->         thawToPtr low $ \low' ->
->         thawToPtr high $ \high' ->
->         thawToPtr in_ $ \in_' ->
+>         V.unsafeWith low $ \low' ->
+>         V.unsafeWith high $ \high' ->
+>         V.unsafeWith in_ $ \in_' ->
 >         MV.unsafeWith (MV.MVector ol op) $ \out' ->
 >         inner low' high' in_' out' len
 > {-# INLINE cProtoToST #-}
