@@ -10,8 +10,8 @@
 >
 > import Control.Loop (numLoop)
 >
-> import Data.Vector.Generic ((!))
-> import qualified Data.Vector.Storable as V
+> import qualified Data.Vector.Generic as V (unsafeIndex)
+> import qualified Data.Vector.Storable as V hiding (unsafeIndex)
 > import qualified Data.Vector.Storable.Mutable as MV
 >
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
@@ -31,10 +31,10 @@ func galMulSlice(c byte, in, out []byte) {
 
 > galMulSlice :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSlice c in_ out = do
->     let mt = GenTables.mulTable ! fromIntegral c
+>     let mt = V.unsafeIndex GenTables.mulTable (fromIntegral c)
 >     numLoop 0 (V.length in_ - 1) $ \n -> do
->         let input = in_ ! n
->         MV.write out n (mt ! fromIntegral input)
+>         let input = V.unsafeIndex in_ n
+>         MV.unsafeWrite out n (V.unsafeIndex mt (fromIntegral input))
 
 func galMulSliceXor(c byte, in, out []byte) {
 	mt := mulTable[c]
@@ -45,8 +45,8 @@ func galMulSliceXor(c byte, in, out []byte) {
 
 > galMulSliceXor :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSliceXor c in_ out = do
->     let mt = GenTables.mulTable ! fromIntegral c
+>     let mt = V.unsafeIndex GenTables.mulTable (fromIntegral c)
 >     numLoop 0 (V.length in_ - 1) $ \n -> do
->         let input = in_ ! n
->         outn <- MV.read out n
->         MV.write out n (outn `xor` mt ! fromIntegral input)
+>         let input = V.unsafeIndex in_ n
+>         outn <- MV.unsafeRead out n
+>         MV.unsafeWrite out n (outn `xor` V.unsafeIndex mt (fromIntegral input))
