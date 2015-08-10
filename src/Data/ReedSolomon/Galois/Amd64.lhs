@@ -1,6 +1,8 @@
 > module Data.ReedSolomon.Galois.Amd64 (
 >       galMulSlice
 >     , galMulSliceXor
+>     , CProto
+>     , cProtoToPrim
 >     ) where
 >
 > import Control.Monad (when)
@@ -13,8 +15,8 @@
 >
 > import Control.Loop (numLoop)
 >
-> import Data.Vector.Generic ((!))
-> import qualified Data.Vector.Storable as V
+> import qualified Data.Vector.Generic as V (unsafeIndex)
+> import qualified Data.Vector.Storable as V hiding (unsafeIndex)
 > import qualified Data.Vector.Storable.Mutable as MV
 >
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
@@ -70,17 +72,17 @@ func galMulSlice(c byte, in, out []byte) {
 > galMulSlice :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSlice c in_ out = do
 >     let c' = fromIntegral c
->         mtlc = GenTables.mulTableLow ! c'
->         mthc = GenTables.mulTableHigh ! c'
+>         mtlc = V.unsafeIndex GenTables.mulTableLow c'
+>         mthc = V.unsafeIndex GenTables.mulTableHigh c'
 >         len = V.length in_
 >     galMulSSSE3 mtlc mthc in_ out
 >     let done = (len `shiftR` 4) `shiftL` 4
 >     when (len - done > 0) $ do
->         let mt = GenTables.mulTable ! c'
+>         let mt = V.unsafeIndex GenTables.mulTable c'
 >         numLoop done (len - 1) $ \i ->
->             MV.write out i (mt ! (fromIntegral $ in_ ! i))
+>             MV.unsafeWrite out i (V.unsafeIndex mt (fromIntegral $ V.unsafeIndex in_ i))
 >   where
->     galMulSSSE3 = cProtoToST c_galMulSSSE3
+>     galMulSSSE3 = cProtoToPrim c_reedsolomon_gal_mul
 > {-# INLINE galMulSlice #-}
 
 func galMulSliceXor(c byte, in, out []byte) {
@@ -101,32 +103,32 @@ func galMulSliceXor(c byte, in, out []byte) {
 > galMulSliceXor :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSliceXor c in_ out = do
 >     let c' = fromIntegral c
->         mtlc = GenTables.mulTableLow ! c'
->         mthc = GenTables.mulTableHigh ! c'
+>         mtlc = V.unsafeIndex GenTables.mulTableLow c'
+>         mthc = V.unsafeIndex GenTables.mulTableHigh c'
 >         len = min (V.length in_) (MV.length out)
 >     galMulSSSE3Xor mtlc mthc in_ out
 >     let done = (len `shiftR` 4) `shiftL` 4
 >     when (len - done > 0) $ do
->         let mt = GenTables.mulTable ! c'
+>         let mt = V.unsafeIndex GenTables.mulTable c'
 >         numLoop done (len - 1) $ \i -> do
->             r <- MV.read out i
->             let m = mt ! (fromIntegral $ in_ ! i)
+>             r <- MV.unsafeRead out i
+>             let m = V.unsafeIndex mt (fromIntegral $ V.unsafeIndex in_ i)
 >                 r' = r `xor` m
->             MV.write out i r'
+>             MV.unsafeWrite out i r'
 >   where
->     galMulSSSE3Xor = cProtoToST c_galMulSSSE3Xor
+>     galMulSSSE3Xor = cProtoToPrim c_reedsolomon_gal_mul_xor
 > {-# INLINE galMulSliceXor #-}
 
 > type CProto = Ptr Word8 -> Ptr Word8 -> Ptr Word8 -> Ptr Word8 -> CSize -> IO ()
 >
-> cProtoToST :: PrimMonad m
->            => CProto
->            -> V.Vector Word8
->            -> V.Vector Word8
->            -> V.Vector Word8
->            -> V.MVector (PrimState m) Word8
->            -> m ()
-> cProtoToST inner low high in_ out@(MV.MVector ol op) = do
+> cProtoToPrim :: PrimMonad m
+>              => CProto
+>              -> V.Vector Word8
+>              -> V.Vector Word8
+>              -> V.Vector Word8
+>              -> V.MVector (PrimState m) Word8
+>              -> m ()
+> cProtoToPrim inner low high in_ out@(MV.MVector ol op) = do
 >     let len = fromIntegral $ min (V.length in_) (MV.length out)
 >     unsafePrimToPrim $ -- TODO Safe?
 >         V.unsafeWith low $ \low' ->
@@ -134,7 +136,7 @@ func galMulSliceXor(c byte, in, out []byte) {
 >         V.unsafeWith in_ $ \in_' ->
 >         MV.unsafeWith (MV.MVector ol op) $ \out' ->
 >         inner low' high' in_' out' len
-> {-# INLINE cProtoToST #-}
+> {-# INLINE cProtoToPrim #-}
 
-> foreign import ccall unsafe "galMulSSSE3" c_galMulSSSE3 :: CProto
-> foreign import ccall unsafe "galMulSSSE3Xor" c_galMulSSSE3Xor :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_xor" c_reedsolomon_gal_mul_xor :: CProto

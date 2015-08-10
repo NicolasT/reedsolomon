@@ -4,6 +4,8 @@ module Main (main) where
 import Control.Monad.ST (ST)
 import Data.Word (Word8)
 
+import Foreign.C (CSize(..))
+
 import Criterion.Main
 
 import qualified Data.Vector.Generic as V
@@ -17,7 +19,14 @@ main :: IO ()
 main = defaultMain [
       bgroup "Galois/galMulSlice/1048576" [
           bench "NoAsm" $ whnf (benchGalMulSlice NoAsm.galMulSlice 177) v1048576
-        , bench "Amd64" $ whnf (benchGalMulSlice Amd64.galMulSlice 177) v1048576
+        , bench "Native" $ whnf (benchGalMulSlice Amd64.galMulSlice 177) v1048576
+        ]
+    , bgroup "reedsolomon_gal_mul" [
+          bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
+        , bench "AVX-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx_opt) v1048576
+        , bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
+        , bench "SSE4.1" $ whnf (benchRGM c_reedsolomon_gal_mul_sse_4_1) v1048576
+        , bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
         ]
     ]
   where
@@ -30,3 +39,26 @@ main = defaultMain [
         out <- MV.new (V.length in_)
         f c in_ out
         return out
+    benchRGM :: Amd64.CProto
+             -> SV.Vector Word8
+             -> SV.Vector Word8
+    benchRGM f in_ = V.create $ do
+        out <- MV.new (V.length in_)
+        f' v16 v16 in_ out
+        return out
+      where
+        f' :: forall s.
+              SV.Vector Word8
+           -> SV.Vector Word8
+           -> SV.Vector Word8
+           -> SV.MVector s Word8
+           -> ST s ()
+        f' = Amd64.cProtoToPrim f
+        v16 = V.fromList [0 .. 15]
+
+type CProto = Amd64.CProto
+foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_avx_opt" c_reedsolomon_gal_mul_avx_opt :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_reedsolomon_gal_mul_avx :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_sse_4_1" c_reedsolomon_gal_mul_sse_4_1 :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_reedsolomon_gal_mul_generic :: CProto

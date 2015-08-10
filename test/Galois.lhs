@@ -1,8 +1,12 @@
 > {-# LANGUAGE ScopedTypeVariables #-}
 > module Galois (tests) where
 >
+> import Prelude hiding (LT)
+>
 > import Control.Monad (foldM, void, when)
 > import Data.Word (Word8)
+>
+> import Foreign.C (CSize(..))
 >
 > import Control.Loop (numLoop)
 >
@@ -13,6 +17,8 @@
 > import Test.Tasty (TestTree, testGroup)
 > import Test.Tasty.HUnit (Assertion, (@?=), testCase)
 > import Test.Tasty.QuickCheck (Property, (==>), testProperty)
+>
+> import qualified Test.QuickCheck as QC
 >
 > import Data.ReedSolomon.Galois
 > import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
@@ -302,6 +308,43 @@ func TestGalois(t *testing.T) {
 >             return out' in
 >     noasm == amd64
 
+> newtype LookupTable = LT (SV.Vector Word8)
+>   deriving (Show, Eq)
+>
+> instance QC.Arbitrary LookupTable where
+>     arbitrary = (LT . SV.fromListN 16) `fmap` QC.vector 16
+>
+> newtype Input = I (SV.Vector Word8)
+>   deriving (Show, Eq)
+>
+> instance QC.Arbitrary Input where
+>     arbitrary = do
+>         l <- QC.arbitrary `QC.suchThat` (>= 16)
+>         let l' = 16 * (l `div` 16)
+>         (I . SV.fromListN l') `fmap` QC.vector l'
+>
+> reedsolomonGalMulEquivalence :: Amd64.CProto
+>                              -> Amd64.CProto
+>                              -> LookupTable
+>                              -> LookupTable
+>                              -> Input
+>                              -> Bool
+> reedsolomonGalMulEquivalence f g low high in_ =
+>     run f low high in_ == run g low high in_
+>   where
+>     run :: Amd64.CProto -> LookupTable -> LookupTable -> Input -> SV.Vector Word8
+>     run e (LT l) (LT h) (I i) = V.create $ do
+>         r <- MV.new (V.length i)
+>         Amd64.cProtoToPrim e l h i r
+>         return r
+
+> type CProto = Amd64.CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul" c_rgm :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_avx_opt" c_rgm_avx_opt :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_rgm_avx :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_sse_4_1" c_rgm_sse41 :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_rgm_generic :: CProto
+
 > tests :: TestTree
 > tests = testGroup "Galois" [
 >       testGroup "Unit" [
@@ -317,6 +360,18 @@ func TestGalois(t *testing.T) {
 >             testGroup "NoAsm/Amd64" [
 >                   testProperty "galMulSlice" galMulSliceProperty
 >                 , testProperty "galMulSliceXor" galMulSliceXorProperty
+>                 ]
+>           , testGroup "cbits" [
+>                   testGroup "reedsolomon_gal_mul" [
+>                         testProperty "native/avx_opt" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx_opt
+>                       , testProperty "native/avx" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx
+>                       , testProperty "native/sse4.1" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse41
+>                       , testProperty "native/generic" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_generic
+>                       ]
 >                 ]
 >           ]
 >     ]
