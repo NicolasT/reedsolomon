@@ -44,7 +44,7 @@ main = defaultMain [
              -> SV.Vector Word8
     benchRGM f in_ = V.create $ do
         out <- MV.new (V.length in_)
-        f' v16 v16 in_ out
+        _ <- f' v16 v16 in_ out
         return out
       where
         f' :: forall s.
@@ -52,7 +52,7 @@ main = defaultMain [
            -> SV.Vector Word8
            -> SV.Vector Word8
            -> SV.MVector s Word8
-           -> ST s ()
+           -> ST s CSize
         f' = Amd64.cProtoToPrim f
         v16 = V.fromList [0 .. 15]
 

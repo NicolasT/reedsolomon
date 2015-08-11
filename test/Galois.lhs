@@ -334,8 +334,11 @@ func TestGalois(t *testing.T) {
 >   where
 >     run :: Amd64.CProto -> LookupTable -> LookupTable -> Input -> SV.Vector Word8
 >     run e (LT l) (LT h) (I i) = V.create $ do
->         r <- MV.new (V.length i)
->         Amd64.cProtoToPrim e l h i r
+>         let len = V.length i
+>         r <- MV.new len
+>         done <- Amd64.cProtoToPrim e l h i r
+>         when (fromIntegral done /= len) $
+>             error "Incorrect length returned"
 >         return r
 
 > type CProto = Amd64.CProto
