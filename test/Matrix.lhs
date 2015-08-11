@@ -1,6 +1,10 @@
+> {-# LANGUAGE OverloadedLists #-}
 > module Matrix (tests) where
 >
 > import Test.Tasty (TestTree, testGroup)
+> import Test.Tasty.HUnit (Assertion, (@?=), testCase)
+>
+> import Data.ReedSolomon.Matrix
 
 /**
  * Unit tests for Matrix
@@ -26,6 +30,11 @@ func TestMatrixIdentity(t *testing.T) {
 		t.Fatal(str, "!=", expect)
 	}
 }
+
+> testMatrixIdentity :: Assertion
+> testMatrixIdentity = do
+>     let m = identityMatrix 3
+>     m @?= [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 func TestMatricMultiply(t *testing.T) {
 	m1, err := newMatrixData(
@@ -56,6 +65,14 @@ func TestMatricMultiply(t *testing.T) {
 	}
 }
 
+> testMatrixMultiply :: Assertion
+> testMatrixMultiply = do
+>     let m1 = [[1, 2], [3, 4]]
+>         m2 = [[5, 6], [7, 8]]
+>         actual = multiply m1 m2
+>         expect = [[11, 22], [19, 42]]
+>     actual @?= expect
+
 func TestMatrixInverse(t *testing.T) {
 	m, err := newMatrixData([][]byte{
 		[]byte{56, 23, 98},
@@ -75,6 +92,19 @@ func TestMatrixInverse(t *testing.T) {
 		t.Fatal(str, "!=", expect)
 	}
 }
+
+> testMatrixInverse :: Assertion
+> testMatrixInverse = do
+>     let m = [ [56, 23, 98]
+>             , [3, 100, 200]
+>             , [45, 201, 123]
+>             ]
+>         m' = invert m
+>         expect = [ [175, 133, 33]
+>                  , [130, 13, 245]
+>                  , [112, 35, 126]
+>                  ]
+>     m' @?= expect
 
 func TestMatrixInverse2(t *testing.T) {
 	m, err := newMatrixData([][]byte{
@@ -102,5 +132,29 @@ func TestMatrixInverse2(t *testing.T) {
 	}
 }
 
+> testMatrixInverse2 :: Assertion
+> testMatrixInverse2 = do
+>     let m = [ [1, 0, 0, 0, 0]
+>             , [0, 1, 0, 0, 0]
+>             , [0, 0, 0, 1, 0]
+>             , [0, 0, 0, 0, 1]
+>             , [7, 7, 6, 6, 1]
+>             ]
+>         m' = invert m
+>         expect = [ [1, 0, 0, 0, 0]
+>                  , [0, 1, 0, 0, 0]
+>                  , [123, 123, 1, 122, 122]
+>                  , [0, 0, 1, 0, 0]
+>                  , [0, 0, 0, 1, 0]
+>                  ]
+>     m' @?= expect
+
 > tests :: TestTree
-> tests = testGroup "Matrix" []
+> tests = testGroup "Matrix" [
+>       testGroup "Unit" [
+>             testCase "testMatrixIdentity" testMatrixIdentity
+>           , testCase "testMatrixMultiply" testMatrixMultiply
+>           , testCase "testMatrixInverse" testMatrixInverse
+>           , testCase "testMatrixInverse2" testMatrixInverse2
+>           ]
+>     ]

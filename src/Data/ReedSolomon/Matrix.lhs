@@ -1,5 +1,28 @@
 > module Data.ReedSolomon.Matrix (
+>       Matrix
+>     , identityMatrix
+>     , multiply
+>     , subMatrix
+>     , invert
+>     , vandermonde
 >     ) where
+>
+> import Prelude hiding (break)
+>
+> import Control.Monad (unless, when)
+> import Control.Monad.ST (ST)
+> import Data.Bits (xor)
+> import Data.STRef (newSTRef, readSTRef, writeSTRef)
+> import Data.Word (Word8)
+>
+> import qualified Data.Vector as V (Vector, MVector)
+> import qualified Data.Vector.Generic as V hiding (Vector)
+> import qualified Data.Vector.Generic.Mutable as MV
+> import qualified Data.Vector.Storable as SV
+>
+> import Control.Loop (numLoop)
+>
+> import qualified Data.ReedSolomon.Galois as Galois
 
 /**
  * Matrix Algebra over an 8-bit Galois Field
@@ -19,6 +42,8 @@ import (
 
 // byte[row][col]
 type matrix [][]byte
+
+> type Matrix = V.Vector (SV.Vector Word8)
 
 // newMatrix returns a matrix of zeros.
 func newMatrix(rows, cols int) (matrix, error) {
@@ -58,6 +83,14 @@ func identityMatrix(size int) (matrix, error) {
 	}
 	return m, nil
 }
+
+> identityMatrix :: Int -> Matrix
+> identityMatrix size =
+>     V.generate size $ \i ->
+>         V.generate size $ \j ->
+>             if i == j
+>             then 1
+>             else 0
 
 // errInvalidRowSize will be returned if attempting to create a matrix with negative or zero row number.
 var errInvalidRowSize = errors.New("invalid row size")
@@ -120,6 +153,20 @@ func (m matrix) Multiply(right matrix) (matrix, error) {
 	return result, nil
 }
 
+> multiply :: Matrix -> Matrix -> Matrix
+> multiply m right
+>     | V.length (V.head m) /= V.length right = error "Column mismatch"
+>     | otherwise =
+>         V.generate (V.length m) $ \r ->
+>             V.generate (V.length (V.head right)) $ \c ->
+>                 foldr
+>                     (\i value ->
+>                         let mri = V.unsafeIndex (V.unsafeIndex m r) i in
+>                         let rightic = V.unsafeIndex (V.unsafeIndex right i) c in
+>                         value `xor` Galois.galMultiply mri rightic)
+>                     0
+>                     [0 .. V.length (V.head m) - 1]
+
 // Augment returns the concatenation of this matrix and the matrix on the right.
 func (m matrix) Augment(right matrix) (matrix, error) {
 	if len(m) != len(right) {
@@ -138,6 +185,11 @@ func (m matrix) Augment(right matrix) (matrix, error) {
 	}
 	return result, nil
 }
+
+> augment :: Matrix -> Matrix -> Matrix
+> augment m right
+>     | V.length m /= V.length right = error "Matrix size"
+>     | otherwise = V.zipWith (V.++) m right
 
 // errMatrixSize is returned if matrix dimensions are doesn't match.
 var errMatrixSize = errors.New("matrix sizes does not match")
@@ -169,6 +221,12 @@ func (m matrix) SubMatrix(rmin, cmin, rmax, cmax int) (matrix, error) {
 	return result, nil
 }
 
+> subMatrix :: Matrix -> Int -> Int -> Int -> Int -> Matrix
+> subMatrix m rmin cmin rmax cmax =
+>     V.generate (rmax - rmin) $ \r ->
+>         V.generate (cmax - cmin) $ \c ->
+>             V.unsafeIndex (V.unsafeIndex m (rmin + r)) (cmin + c)
+
 // SwapRows Exchanges two rows in the matrix.
 func (m matrix) SwapRows(r1, r2 int) error {
 	if r1 < 0 || len(m) <= r1 || r2 < 0 || len(m) <= r2 {
@@ -178,6 +236,12 @@ func (m matrix) SwapRows(r1, r2 int) error {
 	return nil
 }
 
+> swapRows :: V.MVector s a -> Int -> Int -> ST s ()
+> swapRows m r1 r2
+>     | r1 < 0 || MV.length m <= r1 || r2 < 0 || MV.length m <= r2 = error "Invalid row size"
+>     | otherwise = MV.unsafeSwap m r1 r2
+
+
 // IsSquare will return true if the matrix is square
 // and nil if the matrix is square
 func (m matrix) IsSquare() bool {
@@ -186,6 +250,11 @@ func (m matrix) IsSquare() bool {
 	}
 	return true
 }
+
+> isSquare :: Matrix -> Bool
+> isSquare m
+>     | V.length m /= V.length (V.head m) = False
+>     | otherwise = True
 
 // errSingular is returned if the matrix is singular and cannot be inversed
 var errSingular = errors.New("matrix is singular")
@@ -212,6 +281,16 @@ func (m matrix) Invert() (matrix, error) {
 
 	return work.SubMatrix(0, size, size, size*2)
 }
+
+> invert :: Matrix -> Matrix
+> invert m
+>     | not (isSquare m) = error "Not square"
+>     | otherwise =
+>         let size = V.length m in
+>         let work = identityMatrix size in
+>         let work' = augment m work in
+>         let work'' = gaussianElimination work' in
+>         subMatrix work'' 0 size size (size * 2)
 
 func (m matrix) gaussianElimination() error {
 	rows := len(m)
@@ -268,6 +347,56 @@ func (m matrix) gaussianElimination() error {
 	return nil
 }
 
+> gaussianElimination :: Matrix -> Matrix
+> gaussianElimination = V.modify $ \m -> do
+>     let rows = MV.length m
+>
+>     numLoop 0 (rows - 1) $ \r -> do
+>         mrr <- load m r r
+>         when (mrr == 0) $ do
+>             break <- newSTRef False
+>             numLoop (r + 1) (rows - 1) $ \rowBelow -> do
+>                 doBreak <- readSTRef break
+>                 unless doBreak $ do
+>                     mrowBelowr <- load m rowBelow r
+>                     when (mrowBelowr /= 0) $ do
+>                         swapRows m r rowBelow
+>                         writeSTRef break True
+>
+>         mrr' <- load m r r
+>         when (mrr' == 0) $ do
+>             error "Singular"
+>
+>         when (mrr' /= 1) $ do
+>             let scale = Galois.galDivide 1 mrr'
+>             mr <- MV.read m r
+>             let mr' = V.map (\mrc -> Galois.galMultiply mrc scale) mr
+>             MV.write m r mr'
+>
+>         when (rows > r + 1) $ numLoop (r + 1) (rows - 1) $ \rowBelow -> do
+>             mrowBelowr <- load m rowBelow r
+>             when (mrowBelowr /= 0) $ do
+>                 let scale = mrowBelowr
+>                 mr <- MV.read m r
+>                 mrowBelow <- MV.read m rowBelow
+>                 let mrowBelow' = V.zipWith xor mrowBelow (V.map (\mrc -> Galois.galMultiply scale mrc) mr)
+>                 MV.write m rowBelow mrowBelow'
+>
+>     numLoop 0 (rows - 1) $ \d ->
+>         when (d > 0) $ numLoop 0 (d - 1) $ \rowAbove -> do
+>             mrowAboved <- load m rowAbove d
+>             when (mrowAboved /= 0) $ do
+>                 let scale = mrowAboved
+>                 mrowAbove <- MV.read m rowAbove
+>                 md <- MV.read m d
+>                 let mrowAbove' = V.zipWith xor mrowAbove (V.map (\mdc -> Galois.galMultiply scale mdc) md)
+>                 MV.write m rowAbove mrowAbove'
+>   where
+>     load :: V.MVector s (SV.Vector Word8) -> Int -> Int -> ST s Word8
+>     load m row col = do
+>         r <- MV.read m row
+>         return $ (V.!) r col
+
 // Create a Vandermonde matrix, which is guaranteed to have the
 // property that any subset of rows that forms a square matrix
 // is invertible.
@@ -283,3 +412,9 @@ func vandermonde(rows, cols int) (matrix, error) {
 	}
 	return result, nil
 }
+
+> vandermonde :: Int -> Int -> Matrix
+> vandermonde rows cols =
+>     V.generate rows $ \r ->
+>         V.generate cols $ \c ->
+>             Galois.galExp (fromIntegral r) c
