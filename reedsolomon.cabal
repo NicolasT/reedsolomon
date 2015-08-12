@@ -68,6 +68,7 @@ Test-Suite reedsolomon-test
                      , tasty-hunit > 0.9 && < 0.10
                      , tasty-quickcheck >= 0.8 && < 0.9
                      , QuickCheck >= 2.8 && < 2.9
+                     , random >= 1.1 && < 1.2
                      , reedsolomon
   Default-Language:    Haskell2010
   Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -Wall -O2 -fllvm -g

@@ -1,6 +1,16 @@
+> {-# LANGUAGE OverloadedLists #-}
 > module ReedSolomon (tests) where
 >
+> import Control.Exception.Base (ErrorCall(..), catch, fromException, throwIO, try)
+>
+> import System.Random (mkStdGen, randoms)
+>
 > import Test.Tasty (TestTree, testGroup)
+> import Test.Tasty.HUnit (Assertion, (@?=), assertBool, assertFailure, testCase)
+>
+> import qualified Data.Vector.Generic as V
+>
+> import qualified Data.ReedSolomon as RS
 
 /**
  * Unit tests for ReedSolomon
@@ -59,6 +69,28 @@ func TestEncoding(t *testing.T) {
 		t.Errorf("expected %v, got %v", ErrShardSize, err)
 	}
 }
+
+> testEncoding :: Assertion
+> testEncoding = do
+>     let perShard = 50000
+>         r = RS.new 10 3
+>         randoms' = randoms $ mkStdGen 0
+>         shards = flip (V.unfoldrN 10) randoms' $ \s ->
+>                     let (h, t) = splitAt perShard s in
+>                     Just (V.fromListN perShard h, t)
+>
+>         parities = RS.encode r shards
+>         allChunks = (V.++) shards parities
+>
+>     assertBool "Verification failed" $ RS.verify r allChunks
+>
+>     catch
+>         ((length $ show $ RS.encode r [[]]) `seq` return ())
+>         (\(ErrorCall s) -> s @?= "Too few shards")
+>
+>     catch
+>         ((length $ show $ RS.encode r (V.fromListN 13 ([1] : replicate 12 []))) `seq` return ())
+>         (\(ErrorCall s) -> s @?= "Too few shards")
 
 func TestReconstruct(t *testing.T) {
 	perShard := 50000
@@ -189,6 +221,36 @@ func TestVerify(t *testing.T) {
 	}
 }
 
+> testVerify :: Assertion
+> testVerify = do
+>     let perShard = 33333
+>         r = RS.new 10 4
+>         randoms' = randoms $ mkStdGen 0
+>         dataShards = flip (V.unfoldrN 10) randoms' $ \s ->
+>                         let (h, t) = splitAt perShard s in
+>                         Just (V.fromListN perShard h, t)
+>
+>         parityShards = RS.encode r dataShards
+>         shards = (V.++) dataShards parityShards
+>
+>     assertBool "Verification failed" $ RS.verify r shards
+>
+>     let shards' = V.update shards [(10, V.replicate perShard 0)]
+>
+>     assertBool "Verification did not fail" (not $ RS.verify r shards')
+>
+>     let shards'' = V.update shards [(0, V.replicate perShard 0)]
+>
+>     assertBool "Verification did not fail" (not $ RS.verify r shards'')
+>
+>     catch
+>         (RS.verify r [[]] `seq` return ())
+>         (\(ErrorCall s) -> s @?= "Too few shards")
+>
+>     catch
+>         (RS.verify r (V.replicate 14 []) `seq` return ())
+>         (\(ErrorCall s) -> s @?= "No shard data")
+
 func TestOneEncode(t *testing.T) {
 	codec, err := New(5, 5)
 	if err != nil {
@@ -240,6 +302,32 @@ func TestOneEncode(t *testing.T) {
 	}
 
 }
+
+> testOneEncode :: Assertion
+> testOneEncode = do
+>     let codec = RS.new 5 5
+>         shards = [ [0, 1]
+>                  , [4, 5]
+>                  , [2, 3]
+>                  , [6, 7]
+>                  , [8, 9]
+>                  ]
+>         parity = RS.encode codec shards
+>         expected = [ [12, 13]
+>                    , [10, 11]
+>                    , [14, 15]
+>                    , [90, 91]
+>                    , [94, 95]
+>                    ]
+>     parity @?= expected
+>
+>     let allShards = (V.++) shards expected
+>
+>     RS.verify codec allShards @?= True
+>
+>     let allShards' = (V.//) allShards [(8, [91, 91])]
+>
+>     RS.verify codec allShards' @?= False
 
 func fillRandom(b []byte) {
 	for i := range b {
@@ -676,5 +764,38 @@ func TestNew(t *testing.T) {
 	}
 }
 
+> testNew :: Assertion
+> testNew = do
+>     let tests' = [ (10, 500, Nothing)
+>                  , (256, 256, Nothing)
+>                  , (0, 1, Just "Invalid number of shards")
+>                  , (1, 0, Just "Invalid number of shards")
+>                  , (257, 1, Just "Invalid number of shards")
+>                  -- , (256, maxBound `shiftR` 1, Just "Invalid number of shards")
+>                  ] :: [(Int, Int, Maybe String)]
+>
+>     mapM_ (\(data_, parity, err) -> do
+>         r <- try (let x = RS.new data_ parity in assertBool "Length 0" (length (show x) /= 0))
+>         case err of
+>             Nothing ->
+>                 case r of
+>                     Right _ -> return ()
+>                     Left e -> throwIO e
+>             Just e ->
+>                 case r of
+>                     Right _ -> assertFailure "No exception thrown"
+>                     Left e' ->
+>                         case fromException e' of
+>                             Nothing -> throwIO e'
+>                             Just (ErrorCall m) -> m @?= e)
+>         tests'
+
 > tests :: TestTree
-> tests = testGroup "ReedSolomon" []
+> tests = testGroup "ReedSolomon" [
+>       testGroup "Unit" [
+>             testCase "testEncoding" testEncoding
+>           , testCase "testVerify" testVerify
+>           , testCase "testOneEncode" testOneEncode
+>           , testCase "testNew" testNew
+>           ]
+>     ]

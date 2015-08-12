@@ -1,5 +1,23 @@
+> {-# LANGUAGE ScopedTypeVariables #-}
 > module Data.ReedSolomon (
+>       new
+>     , encode
+>     , verify
 >     ) where
+>
+> import Control.Monad.ST (ST)
+> import Data.Word
+>
+> import qualified Data.Vector as V (Vector, MVector)
+> import qualified Data.Vector.Generic as V hiding (Vector)
+> import qualified Data.Vector.Generic.Mutable as MV
+> import qualified Data.Vector.Storable as SV
+>
+> import Control.Loop (numLoop)
+>
+> import Data.ReedSolomon.Matrix (Matrix)
+> import qualified Data.ReedSolomon.Matrix as Matrix
+> import Data.ReedSolomon.Galois.Amd64 (galMulSlice, galMulSliceXor)
 
 /**
  * Reed-Solomon Coding over 8-bit values.
@@ -87,6 +105,16 @@ type reedSolomon struct {
 	parity       [][]byte
 }
 
+> data Encoder = Encoder { rsDataShards :: Int
+>                        , rsParityShards :: Int
+>                        , rsShards :: Int
+>                        , rsM :: Matrix
+>                        , rsParity :: Matrix
+>                        }
+>   deriving (Show, Eq)
+
+> type MMatrix s = V.MVector s (SV.Vector Word8)
+
 // ErrInvShardNum will be returned by New, if you attempt to create
 // an Encoder where either data or parity shards is zero or less,
 // or the number of data shards is higher than 256.
@@ -135,6 +163,26 @@ func New(dataShards, parityShards int) (Encoder, error) {
 	return &r, err
 }
 
+> new :: Int -> Int -> Encoder
+> new dataShards parityShards
+>     | dataShards <= 0 || parityShards <= 0 = error "Invalid number of shards"
+>     | dataShards > 256 = error "Invalid number of shards"
+>     | otherwise =
+>         let shards = dataShards + parityShards in
+>         let vm = Matrix.vandermonde shards dataShards in
+>         let top = Matrix.subMatrix vm 0 0 dataShards dataShards in
+>         let top' = Matrix.invert top in
+>         let m = Matrix.multiply vm top' in
+>
+>         let parity = V.drop dataShards m in
+>
+>         Encoder { rsDataShards = dataShards
+>                 , rsParityShards = parityShards
+>                 , rsShards = shards
+>                 , rsM = m
+>                 , rsParity = parity
+>                 }
+
 // ErrTooFewShards is returned if too few shards where given to
 // Encode/Verify/Reconstruct. It will also be returned from Reconstruct
 // if there were too few shards to reconstruct the missing data.
@@ -164,6 +212,15 @@ func (r reedSolomon) Encode(shards [][]byte) error {
 	return nil
 }
 
+> encode :: Encoder -> Matrix -> Matrix
+> encode r shards
+>     | V.length shards /= rsDataShards r = error "Too few shards"
+>     | not (checkShards shards False) = error "Invalid shard layout"
+>     | otherwise = V.create $ do
+>         output <- MV.new (rsParityShards r)
+>         codeSomeShards r (rsParity r) shards output (rsParityShards r) (V.length $ V.head shards)
+>         return output
+
 // Verify returns true if the parity shards contain the right data.
 // The data is the same format as Encode. No data is modified.
 func (r reedSolomon) Verify(shards [][]byte) (bool, error) {
@@ -181,6 +238,14 @@ func (r reedSolomon) Verify(shards [][]byte) (bool, error) {
 	// Do the checking.
 	return r.checkSomeShards(r.parity, shards[0:r.DataShards], toCheck, r.ParityShards, len(shards[0])), nil
 }
+
+> verify :: Encoder -> Matrix -> Bool
+> verify r shards
+>     | V.length shards /= rsShards r = error "Too few shards"
+>     | not (checkShards shards False) = error "Failed checking shards"
+>     | otherwise =
+>         let (dataShards, toCheck) = V.splitAt (rsDataShards r) shards in
+>         checkSomeShards r (rsParity r) dataShards toCheck (rsParityShards r) (V.length $ V.head shards)
 
 // Multiplies a subset of rows from a coding matrix by a full set of
 // input shards to produce some output shards.
@@ -207,6 +272,23 @@ func (r reedSolomon) codeSomeShards(matrixRows, inputs, outputs [][]byte, output
 		}
 	}
 }
+
+> codeSomeShards :: Encoder -> Matrix -> Matrix -> MMatrix s -> Int -> Int -> ST s ()
+> codeSomeShards r matrixRows inputs outputs outputCount byteCount = do
+>     outputs' :: V.Vector (SV.MVector s Word8) <- V.replicateM outputCount (MV.replicate byteCount 0)
+>     numLoop 0 (rsDataShards r - 1) $ \c -> do
+>         let in_ = V.unsafeIndex inputs c
+>         numLoop 0 (outputCount - 1) $ \iRow -> do
+>             let mic = V.unsafeIndex (V.unsafeIndex matrixRows iRow) c
+>                 oi = V.unsafeIndex outputs' iRow
+>             if (c == 0)
+>             then galMulSlice mic in_ oi
+>             else galMulSliceXor mic in_ oi
+>
+>     numLoop 0 (outputCount - 1) $ \i -> do
+>         let oi = V.unsafeIndex outputs' i
+>         oi' <- V.unsafeFreeze oi
+>         MV.write outputs i oi'
 
 // How many bytes per goroutine.
 const splitSize = 512
@@ -300,6 +382,11 @@ func (r reedSolomon) checkSomeShards(matrixRows, inputs, toCheck [][]byte, outpu
 	return same
 }
 
+> checkSomeShards :: Encoder -> Matrix -> Matrix -> Matrix -> Int -> Int -> Bool
+> checkSomeShards r _matrixRows inputs toCheck _outputCount _byteCount =
+>     -- Very basic non-parallel implementation for now
+>     encode r inputs == toCheck
+
 // ErrShardNoData will be returned if there are no shards,
 // or if the length of all shards is zero.
 var ErrShardNoData = errors.New("no shard data")
@@ -326,6 +413,22 @@ func checkShards(shards [][]byte, nilok bool) error {
 	return nil
 }
 
+> checkShards :: Matrix -> Bool -> Bool
+> checkShards shards nilok
+>     | size == 0 = error "No shard data"
+>     | otherwise =
+>         if any invalid shards
+>         then error "Invalid shard size 1"
+>         else True
+>   where
+>     size = shardSize shards
+>     invalid shard
+>         | V.length shard /= size =
+>             if (V.length shard /= 0) || not nilok
+>             then error "Invalid shard size"
+>             else True
+>         | otherwise = False
+
 // shardSize return the size of a single shard.
 // The first non-zero size is returned,
 // or 0 if all shards are size 0.
@@ -337,6 +440,9 @@ func shardSize(shards [][]byte) int {
 	}
 	return 0
 }
+
+> shardSize :: Matrix -> Int
+> shardSize shards = maybe 0 V.length $ V.find (\v -> V.length v /= 0) shards
 
 // Reconstruct will recreate the missing shards, if possible.
 //
