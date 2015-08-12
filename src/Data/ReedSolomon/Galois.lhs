@@ -9,7 +9,7 @@
 > import Data.Bits (xor)
 > import Data.Word (Word8)
 >
-> import Data.Vector.Generic ((!))
+> import qualified Data.Vector.Generic as V
 >
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
 
@@ -108,7 +108,9 @@ func galMultiply(a, b byte) byte {
 }
 
 > galMultiply :: Word8 -> Word8 -> Word8
-> galMultiply a b = GenTables.mulTable ! fromIntegral a ! fromIntegral b
+> galMultiply a b =
+>     let row = V.unsafeIndex GenTables.mulTable (fromIntegral a) in
+>     V.unsafeIndex row (fromIntegral b)
 
 // Original function:
 /*
@@ -145,14 +147,14 @@ func galDivide(a, b byte) byte {
 >     | a == 0 = 0
 >     | b == 0 = error "Argument 'divisor' is 0"
 >     | otherwise =
->         let logA = fromIntegral $ GenTables.logTable ! fromIntegral a in
->         let logB = fromIntegral $ GenTables.logTable ! fromIntegral b in
+>         let logA = fromIntegral $ V.unsafeIndex GenTables.logTable (fromIntegral a) in
+>         let logB = fromIntegral $ V.unsafeIndex GenTables.logTable (fromIntegral b) in
 >         let logResult =
 >                 let logResult' = logA - logB in
 >                 if logResult' < 0
 >                 then logResult' + 255
 >                 else logResult' in
->         GenTables.expTable ! logResult
+>         V.unsafeIndex GenTables.expTable logResult
 
 // Computes a**n.
 //
@@ -178,10 +180,10 @@ func galExp(a byte, n int) byte {
 >     | n == 0 = 1
 >     | a == 0 = 0
 >     | otherwise =
->         let logA = GenTables.logTable ! fromIntegral a in
+>         let logA = V.unsafeIndex GenTables.logTable (fromIntegral a) in
 >         let logResult =
 >                 let logResult' = fromIntegral logA * n in
 >                 let loop i | i >= 255 = loop (i - 255)
 >                            | otherwise = i in
 >                 loop logResult' in
->         GenTables.expTable ! logResult
+>         V.unsafeIndex GenTables.expTable logResult
