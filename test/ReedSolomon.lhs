@@ -7,6 +7,9 @@
 >
 > import Test.Tasty (TestTree, testGroup)
 > import Test.Tasty.HUnit (Assertion, (@?=), assertBool, assertFailure, testCase)
+> import Test.Tasty.QuickCheck (testProperty)
+>
+> import Test.QuickCheck (Gen, Positive(Positive), arbitrary, choose, vectorOf)
 >
 > import qualified Data.Vector.Generic as V
 >
@@ -157,6 +160,43 @@ func TestReconstruct(t *testing.T) {
 		t.Errorf("expected %v, got %v", ErrShardNoData, err)
 	}
 }
+
+> testReconstruct :: Assertion
+> testReconstruct = do
+>     let perShard = 50000
+>         r = RS.new 10 3
+>         randoms' = randoms $ mkStdGen 0
+>         shards = flip (V.unfoldrN 10) randoms' $ \s ->
+>                     let (h, t) = splitAt perShard s in
+>                     Just (V.fromListN perShard h, t)
+>         parities = RS.encode r shards
+>         toReconstruct = V.map Just ((V.++) shards parities)
+>         all' = RS.reconstruct r toReconstruct
+>
+>     all' @?= (V.++) shards parities
+>
+>     let shards' = RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
+>                                                           , (7, Nothing)
+>                                                           , (11, Nothing)
+>                                                           ]
+>     RS.verify r shards' @?= True
+>
+>     let shards'' = RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
+>                                                            , (4, Nothing)
+>                                                            , (7, Nothing)
+>                                                            , (11, Nothing)
+>                                                            ]
+>     catch
+>         ((RS.verify r shards'' @?= True) >> assertFailure "Expected 'Too few shards'")
+>         (\(ErrorCall s) -> s @?= "Too few shards")
+>
+>     catch
+>         ((RS.verify r (RS.reconstruct r [Just []]) @?= True) >> assertFailure "Expected 'Too few shards'")
+>         (\(ErrorCall s) -> s @?= "Too few shards")
+>
+>     catch
+>         ((RS.verify r (RS.reconstruct r (V.replicate 13 Nothing)) @?= True) >> assertFailure "Expected 'No shard data'")
+>         (\(ErrorCall s) -> s @?= "No shard data")
 
 func TestVerify(t *testing.T) {
 	perShard := 33333
@@ -790,12 +830,37 @@ func TestNew(t *testing.T) {
 >                             Just (ErrorCall m) -> m @?= e)
 >         tests'
 
+> encodeRecover :: Positive Int -> Gen Bool
+> encodeRecover (Positive fragmentSize) = do
+>     numDataShards <- choose (1, 10)
+>     numParities <- choose (1, 10)
+>
+>     let r = RS.new numDataShards numParities
+>
+>     dataShards <- V.replicateM numDataShards (V.replicateM fragmentSize arbitrary)
+>     let parities = RS.encode r dataShards
+>         allFragments = (V.++) dataShards parities
+>
+>     dropped <- do
+>         numDrops <- choose (0, numParities)
+>         let dropIdx = choose (0, numDataShards + numParities - 1)
+>         vectorOf numDrops dropIdx
+>
+>     let someFragments = (V.//) (V.map Just allFragments) $ map (\idx -> (idx, Nothing)) dropped
+>         recovered = RS.reconstruct r someFragments
+>
+>     return $ recovered == allFragments
+
 > tests :: TestTree
 > tests = testGroup "ReedSolomon" [
 >       testGroup "Unit" [
 >             testCase "testEncoding" testEncoding
+>           , testCase "testReconstruct" testReconstruct
 >           , testCase "testVerify" testVerify
 >           , testCase "testOneEncode" testOneEncode
 >           , testCase "testNew" testNew
+>           ]
+>     , testGroup "Properties" [
+>             testProperty "encodeRecover" encodeRecover
 >           ]
 >     ]

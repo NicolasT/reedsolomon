@@ -3,9 +3,12 @@
 >       new
 >     , encode
 >     , verify
+>     , reconstruct
 >     ) where
 >
-> import Control.Monad.ST (ST)
+> import Control.Monad (when)
+> import Control.Monad.ST (ST, runST)
+> import Data.Maybe (fromJust, fromMaybe)
 > import Data.Word
 >
 > import qualified Data.Vector as V (Vector, MVector)
@@ -113,7 +116,7 @@ type reedSolomon struct {
 >                        }
 >   deriving (Show, Eq)
 
-> type MMatrix s = V.MVector s (SV.Vector Word8)
+> type MMatrix s = V.Vector (SV.MVector s Word8)
 
 // ErrInvShardNum will be returned by New, if you attempt to create
 // an Encoder where either data or parity shards is zero or less,
@@ -216,10 +219,10 @@ func (r reedSolomon) Encode(shards [][]byte) error {
 > encode r shards
 >     | V.length shards /= rsDataShards r = error "Too few shards"
 >     | not (checkShards shards False) = error "Invalid shard layout"
->     | otherwise = V.create $ do
->         output <- MV.new (rsParityShards r)
+>     | otherwise = runST $ do
+>         output :: MMatrix s <- V.replicateM (rsParityShards r) (MV.new $ shardSize shards)
 >         codeSomeShards r (rsParity r) shards output (rsParityShards r) (V.length $ V.head shards)
->         return output
+>         V.forM output V.unsafeFreeze
 
 // Verify returns true if the parity shards contain the right data.
 // The data is the same format as Encode. No data is modified.
@@ -274,21 +277,15 @@ func (r reedSolomon) codeSomeShards(matrixRows, inputs, outputs [][]byte, output
 }
 
 > codeSomeShards :: Encoder -> Matrix -> Matrix -> MMatrix s -> Int -> Int -> ST s ()
-> codeSomeShards r matrixRows inputs outputs outputCount byteCount = do
->     outputs' :: V.Vector (SV.MVector s Word8) <- V.replicateM outputCount (MV.replicate byteCount 0)
+> codeSomeShards r matrixRows inputs outputs outputCount _byteCount = do
 >     numLoop 0 (rsDataShards r - 1) $ \c -> do
 >         let in_ = V.unsafeIndex inputs c
->         numLoop 0 (outputCount - 1) $ \iRow -> do
+>         when (outputCount > 0) $ numLoop 0 (outputCount - 1) $ \iRow -> do
 >             let mic = V.unsafeIndex (V.unsafeIndex matrixRows iRow) c
->                 oi = V.unsafeIndex outputs' iRow
+>                 oi = V.unsafeIndex outputs iRow
 >             if (c == 0)
 >             then galMulSlice mic in_ oi
 >             else galMulSliceXor mic in_ oi
->
->     numLoop 0 (outputCount - 1) $ \i -> do
->         let oi = V.unsafeIndex outputs' i
->         oi' <- V.unsafeFreeze oi
->         MV.write outputs i oi'
 
 // How many bytes per goroutine.
 const splitSize = 512
@@ -418,7 +415,7 @@ func checkShards(shards [][]byte, nilok bool) error {
 >     | size == 0 = error "No shard data"
 >     | otherwise =
 >         if any invalid shards
->         then error "Invalid shard size 1"
+>         then error "Impossible code path"
 >         else True
 >   where
 >     size = shardSize shards
@@ -426,7 +423,7 @@ func checkShards(shards [][]byte, nilok bool) error {
 >         | V.length shard /= size =
 >             if (V.length shard /= 0) || not nilok
 >             then error "Invalid shard size"
->             else True
+>             else False
 >         | otherwise = False
 
 // shardSize return the size of a single shard.
@@ -557,6 +554,97 @@ func (r reedSolomon) Reconstruct(shards [][]byte) error {
 	r.codeSomeShards(matrixRows, shards[:r.DataShards], outputs[:outputCount], outputCount, shardSize)
 	return nil
 }
+
+> reconstruct :: Encoder -> V.Vector (Maybe (SV.Vector Word8)) -> Matrix
+> reconstruct r shards0
+>     | V.length shards0 /= rsShards r = error "Too few shards"
+>     | not (checkShards shards0' True) = error "checkShards failed"
+>     | numberPresent == rsShards r = V.map fromJust shards0
+>     | numberPresent < rsDataShards r = error "Too few shards"
+>     | otherwise = runST $ do
+>         shards :: V.MVector s (SV.MVector s Word8) <- MV.new (V.length shards0)
+>         numLoop 0 (MV.length shards - 1) $ \i -> do
+>             let row = (V.!) shards0 i
+>             row' <- maybe (MV.new 0) V.thaw row
+>             MV.write shards i row'
+>
+>         subMatrix :: V.Vector (SV.MVector s Word8) <- V.replicateM dataShards (MV.replicate dataShards 0)
+>         subShards :: V.MVector s (SV.MVector s Word8) <- MV.new dataShards
+>
+>         let loop0 matrixRow subMatrixRow
+>                 | matrixRow >= rsShards r = return ()
+>                 | subMatrixRow >= dataShards = return ()
+>                 | otherwise = do
+>                     shardsmatrixRow <- MV.read shards matrixRow
+>                     if (MV.length shardsmatrixRow) /= 0
+>                     then do
+>                         numLoop 0 (dataShards - 1) $ \c -> do
+>                             let mmatrixRowc = (V.!) ((V.!) (rsM r) matrixRow) c
+>                             let subMatrixsubMatrixRow = (V.!) subMatrix subMatrixRow
+>                             MV.write subMatrixsubMatrixRow c mmatrixRowc
+>                         MV.write subShards subMatrixRow shardsmatrixRow
+>                         loop0 (matrixRow + 1) (subMatrixRow + 1)
+>                     else
+>                         loop0 (matrixRow + 1) subMatrixRow
+>
+>         loop0 0 0
+>
+>         dataDecodeMatrix <- Matrix.invert `fmap` V.forM subMatrix V.freeze
+>
+>         outputs :: V.MVector s (SV.MVector s Word8) <- MV.new (rsParityShards r)
+>         matrixRows :: V.MVector s (SV.Vector Word8) <- MV.new (rsParityShards r)
+>
+>         let loop1 iShard outputCount
+>                 | iShard >= dataShards = return outputCount
+>                 | otherwise = do
+>                     shardsiShard0 <- MV.read shards iShard
+>                     if (MV.length shardsiShard0 == 0)
+>                     then do
+>                         shardsiShard <- MV.new shardSize'
+>                         MV.write shards iShard shardsiShard
+>                         MV.write outputs outputCount shardsiShard
+>                         MV.write matrixRows outputCount ((V.!) dataDecodeMatrix iShard)
+>                         loop1 (iShard + 1) (outputCount + 1)
+>                     else
+>                         loop1 (iShard + 1) outputCount
+>
+>         outputCount <- loop1 0 0
+>
+>         matrixRows' <- V.freeze matrixRows
+>         outputs' <- V.freeze outputs
+>
+>         subShards' <- V.mapM V.freeze =<< V.freeze subShards
+>         codeSomeShards r matrixRows' subShards' (V.take outputCount outputs') outputCount shardSize'
+>
+>         let loop2 iShard outputCount'
+>                 | iShard >= rsShards r = return outputCount'
+>                 | otherwise = do
+>                     shardsiShard0 <- MV.read shards iShard
+>                     if (MV.length shardsiShard0 == 0)
+>                     then do
+>                         shardsiShard <- MV.new shardSize'
+>                         MV.write shards iShard shardsiShard
+>                         MV.write outputs outputCount' shardsiShard
+>                         let p = (V.!) (rsParity r) (iShard - dataShards)
+>                         MV.write matrixRows outputCount' p
+>                         loop2 (iShard + 1) (outputCount' + 1)
+>                     else
+>                         loop2 (iShard + 1) outputCount'
+>
+>         outputCount' <- loop2 0 0
+>
+>         matrixRows'' <- V.freeze matrixRows
+>         outputs'' <- V.freeze outputs
+>         s <- V.mapM V.freeze =<< (V.freeze $ MV.slice 0 dataShards shards)
+>
+>         codeSomeShards r matrixRows'' s (V.slice 0 outputCount' outputs'') outputCount' shardSize'
+>
+>         V.mapM V.unsafeFreeze =<< V.unsafeFreeze shards
+>   where
+>     shards0' = V.map (fromMaybe V.empty) shards0
+>     numberPresent = V.foldr (\v c -> maybe c (const $ c + 1) v) 0 shards0
+>     dataShards = rsDataShards r
+>     shardSize' = shardSize shards0'
 
 // ErrShortData will be returned by Split(), if there isn't enough data
 // to fill the number of shards.
