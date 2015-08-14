@@ -60,6 +60,12 @@ Test-Suite reedsolomon-test
   Other-Modules:       Galois
                      , Matrix
                      , ReedSolomon
+                     , Data.ReedSolomon
+                     , Data.ReedSolomon.Galois
+                     , Data.ReedSolomon.Galois.Amd64
+                     , Data.ReedSolomon.Galois.GenTables
+                     , Data.ReedSolomon.Galois.NoAsm
+                     , Data.ReedSolomon.Matrix
   Build-Depends:       base
                      , vector
                      , loop
@@ -79,6 +85,9 @@ Benchmark reedsolomon-bench
   Hs-Source-Dirs:      bench
                      , src
   Main-Is:             Main.hs
+  Other-Modules:       Data.ReedSolomon.Galois.Amd64
+                     , Data.ReedSolomon.Galois.GenTables
+                     , Data.ReedSolomon.Galois.NoAsm
   Build-Depends:       base
                      , vector
                      , loop
