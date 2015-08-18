@@ -1,7 +1,8 @@
 > {-# LANGUAGE OverloadedLists #-}
 > module ReedSolomon (tests) where
 >
-> import Control.Exception.Base (ErrorCall(..), catch, fromException, throwIO, try)
+> import Control.Exception.Base (catch, fromException, throwIO, try)
+> import Control.Monad (void)
 >
 > import System.Random (mkStdGen, randoms)
 >
@@ -76,24 +77,24 @@ func TestEncoding(t *testing.T) {
 > testEncoding :: Assertion
 > testEncoding = do
 >     let perShard = 50000
->         r = RS.new 10 3
->         randoms' = randoms $ mkStdGen 0
+>     r <- RS.new 10 3
+>     let randoms' = randoms $ mkStdGen 0
 >         shards = flip (V.unfoldrN 10) randoms' $ \s ->
 >                     let (h, t) = splitAt perShard s in
 >                     Just (V.fromListN perShard h, t)
 >
->         parities = RS.encode r shards
->         allChunks = (V.++) shards parities
+>     parities <- RS.encode r shards
+>     let allChunks = (V.++) shards parities
 >
->     assertBool "Verification failed" $ RS.verify r allChunks
->
->     catch
->         ((length $ show $ RS.encode r [[]]) `seq` return ())
->         (\(ErrorCall s) -> s @?= "Too few shards")
+>     assertBool "Verification failed" =<< RS.verify r allChunks
 >
 >     catch
->         ((length $ show $ RS.encode r (V.fromListN 13 ([1] : replicate 12 []))) `seq` return ())
->         (\(ErrorCall s) -> s @?= "Too few shards")
+>         (void $ RS.encode r [[]])
+>         (\(RS.InvalidNumberOfShards RS.DataShard 1) -> return ())
+>
+>     catch
+>         (void $ RS.encode r (V.fromListN 13 ([1] : replicate 12 [])))
+>         (\(RS.InvalidNumberOfShards RS.DataShard 13) -> return ())
 
 func TestReconstruct(t *testing.T) {
 	perShard := 50000
@@ -164,39 +165,45 @@ func TestReconstruct(t *testing.T) {
 > testReconstruct :: Assertion
 > testReconstruct = do
 >     let perShard = 50000
->         r = RS.new 10 3
->         randoms' = randoms $ mkStdGen 0
+>     r <- RS.new 10 3
+>     let randoms' = randoms $ mkStdGen 0
 >         shards = flip (V.unfoldrN 10) randoms' $ \s ->
 >                     let (h, t) = splitAt perShard s in
 >                     Just (V.fromListN perShard h, t)
->         parities = RS.encode r shards
->         toReconstruct = V.map Just ((V.++) shards parities)
->         all' = RS.reconstruct r toReconstruct
+>     parities <- RS.encode r shards
+>     let toReconstruct = V.map Just ((V.++) shards parities)
+>     all' <- RS.reconstruct r toReconstruct
 >
 >     all' @?= (V.++) shards parities
 >
->     let shards' = RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
->                                                           , (7, Nothing)
->                                                           , (11, Nothing)
->                                                           ]
->     RS.verify r shards' @?= True
->
->     let shards'' = RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
->                                                            , (4, Nothing)
->                                                            , (7, Nothing)
->                                                            , (11, Nothing)
->                                                            ]
->     catch
->         ((RS.verify r shards'' @?= True) >> assertFailure "Expected 'Too few shards'")
->         (\(ErrorCall s) -> s @?= "Too few shards")
+>     shards' <- RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
+>                                                        , (7, Nothing)
+>                                                        , (11, Nothing)
+>                                                        ]
+>     verified <- RS.verify r shards'
+>     verified @?= True
 >
 >     catch
->         ((RS.verify r (RS.reconstruct r [Just []]) @?= True) >> assertFailure "Expected 'Too few shards'")
->         (\(ErrorCall s) -> s @?= "Too few shards")
+>         (do
+>             _ <- RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
+>                                                          , (4, Nothing)
+>                                                          , (7, Nothing)
+>                                                          , (11, Nothing)
+>                                                          ]
+>             assertFailure "Expected 'Too few shards'")
+>         (\(RS.InvalidNumberOfShards RS.AnyShard 9) -> return ())
 >
 >     catch
->         ((RS.verify r (RS.reconstruct r (V.replicate 13 Nothing)) @?= True) >> assertFailure "Expected 'No shard data'")
->         (\(ErrorCall s) -> s @?= "No shard data")
+>         (do
+>             _ <- RS.reconstruct r [Just []]
+>             assertFailure "Expected 'Too few shards'")
+>         (\(RS.InvalidNumberOfShards RS.AnyShard 1) -> return ())
+>
+>     catch
+>         (do
+>             _ <- RS.reconstruct r (V.replicate 13 Nothing)
+>             assertFailure "Expected 'No shard data'")
+>         (\RS.EmptyShards -> return ())
 
 func TestVerify(t *testing.T) {
 	perShard := 33333
@@ -264,32 +271,32 @@ func TestVerify(t *testing.T) {
 > testVerify :: Assertion
 > testVerify = do
 >     let perShard = 33333
->         r = RS.new 10 4
->         randoms' = randoms $ mkStdGen 0
+>     r <- RS.new 10 4
+>     let randoms' = randoms $ mkStdGen 0
 >         dataShards = flip (V.unfoldrN 10) randoms' $ \s ->
 >                         let (h, t) = splitAt perShard s in
 >                         Just (V.fromListN perShard h, t)
 >
->         parityShards = RS.encode r dataShards
->         shards = (V.++) dataShards parityShards
+>     parityShards <- RS.encode r dataShards
+>     let shards = (V.++) dataShards parityShards
 >
->     assertBool "Verification failed" $ RS.verify r shards
+>     assertBool "Verification failed" =<< RS.verify r shards
 >
 >     let shards' = V.update shards [(10, V.replicate perShard 0)]
 >
->     assertBool "Verification did not fail" (not $ RS.verify r shards')
+>     assertBool "Verification did not fail" =<< not `fmap` RS.verify r shards'
 >
 >     let shards'' = V.update shards [(0, V.replicate perShard 0)]
 >
->     assertBool "Verification did not fail" (not $ RS.verify r shards'')
+>     assertBool "Verification did not fail" =<< not `fmap` RS.verify r shards''
 >
 >     catch
->         (RS.verify r [[]] `seq` return ())
->         (\(ErrorCall s) -> s @?= "Too few shards")
+>         (void $ RS.verify r [[]])
+>         (\(RS.InvalidNumberOfShards RS.DataShard 1) -> return ())
 >
 >     catch
->         (RS.verify r (V.replicate 14 []) `seq` return ())
->         (\(ErrorCall s) -> s @?= "No shard data")
+>         (void $ RS.verify r (V.replicate 14 []))
+>         (\RS.EmptyShards -> return ())
 
 func TestOneEncode(t *testing.T) {
 	codec, err := New(5, 5)
@@ -345,15 +352,15 @@ func TestOneEncode(t *testing.T) {
 
 > testOneEncode :: Assertion
 > testOneEncode = do
->     let codec = RS.new 5 5
->         shards = [ [0, 1]
+>     codec <- RS.new 5 5
+>     let shards = [ [0, 1]
 >                  , [4, 5]
 >                  , [2, 3]
 >                  , [6, 7]
 >                  , [8, 9]
 >                  ]
->         parity = RS.encode codec shards
->         expected = [ [12, 13]
+>     parity <- RS.encode codec shards
+>     let expected = [ [12, 13]
 >                    , [10, 11]
 >                    , [14, 15]
 >                    , [90, 91]
@@ -363,11 +370,13 @@ func TestOneEncode(t *testing.T) {
 >
 >     let allShards = (V.++) shards expected
 >
->     RS.verify codec allShards @?= True
+>     verified <- RS.verify codec allShards
+>     verified @?= True
 >
 >     let allShards' = (V.//) allShards [(8, [91, 91])]
 >
->     RS.verify codec allShards' @?= False
+>     verified' <- RS.verify codec allShards'
+>     verified' @?= False
 
 func fillRandom(b []byte) {
 	for i := range b {
@@ -808,14 +817,14 @@ func TestNew(t *testing.T) {
 > testNew = do
 >     let tests' = [ (10, 500, Nothing)
 >                  , (256, 256, Nothing)
->                  , (0, 1, Just "Invalid number of shards")
->                  , (1, 0, Just "Invalid number of shards")
->                  , (257, 1, Just "Invalid number of shards")
+>                  , (0, 1, Just $ RS.InvalidNumberOfShards RS.DataShard 0)
+>                  , (1, 0, Just $ RS.InvalidNumberOfShards RS.ParityShard 0)
+>                  , (257, 1, Just $ RS.InvalidNumberOfShards RS.DataShard 257)
 >                  -- , (256, maxBound `shiftR` 1, Just "Invalid number of shards")
->                  ] :: [(Int, Int, Maybe String)]
+>                  ]  :: [(Int, Int, Maybe RS.ValueError)]
 >
 >     mapM_ (\(data_, parity, err) -> do
->         r <- try (let x = RS.new data_ parity in assertBool "Length 0" (length (show x) /= 0))
+>         r <- try $ RS.new data_ parity
 >         case err of
 >             Nothing ->
 >                 case r of
@@ -827,7 +836,7 @@ func TestNew(t *testing.T) {
 >                     Left e' ->
 >                         case fromException e' of
 >                             Nothing -> throwIO e'
->                             Just (ErrorCall m) -> m @?= e)
+>                             Just m -> m @?= e)
 >         tests'
 
 > encodeRecover :: Positive Int -> Gen Bool
@@ -835,10 +844,10 @@ func TestNew(t *testing.T) {
 >     numDataShards <- choose (1, 10)
 >     numParities <- choose (1, 10)
 >
->     let r = RS.new numDataShards numParities
+>     let Right r = RS.new numDataShards numParities
 >
 >     dataShards <- V.replicateM numDataShards (V.replicateM fragmentSize arbitrary)
->     let parities = RS.encode r dataShards
+>     let Just parities = RS.encode r dataShards
 >         allFragments = (V.++) dataShards parities
 >
 >     dropped <- do
@@ -847,7 +856,7 @@ func TestNew(t *testing.T) {
 >         vectorOf numDrops dropIdx
 >
 >     let someFragments = (V.//) (V.map Just allFragments) $ map (\idx -> (idx, Nothing)) dropped
->         recovered = RS.reconstruct r someFragments
+>         Right recovered = RS.reconstruct r someFragments
 >
 >     return $ recovered == allFragments
 

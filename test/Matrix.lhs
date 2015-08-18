@@ -69,8 +69,8 @@ func TestMatricMultiply(t *testing.T) {
 > testMatrixMultiply = do
 >     let m1 = [[1, 2], [3, 4]]
 >         m2 = [[5, 6], [7, 8]]
->         actual = multiply m1 m2
->         expect = [[11, 22], [19, 42]]
+>     actual <- multiply m1 m2
+>     let expect = [[11, 22], [19, 42]]
 >     actual @?= expect
 
 func TestMatrixInverse(t *testing.T) {
@@ -99,8 +99,8 @@ func TestMatrixInverse(t *testing.T) {
 >             , [3, 100, 200]
 >             , [45, 201, 123]
 >             ]
->         m' = invert m
->         expect = [ [175, 133, 33]
+>     m' <- invert m
+>     let expect = [ [175, 133, 33]
 >                  , [130, 13, 245]
 >                  , [112, 35, 126]
 >                  ]
@@ -140,8 +140,8 @@ func TestMatrixInverse2(t *testing.T) {
 >             , [0, 0, 0, 0, 1]
 >             , [7, 7, 6, 6, 1]
 >             ]
->         m' = invert m
->         expect = [ [1, 0, 0, 0, 0]
+>     m' <- invert m
+>     let expect = [ [1, 0, 0, 0, 0]
 >                  , [0, 1, 0, 0, 0]
 >                  , [123, 123, 1, 122, 122]
 >                  , [0, 0, 1, 0, 0]

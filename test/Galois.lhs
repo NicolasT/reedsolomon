@@ -125,8 +125,8 @@ func TestInverse(t *testing.T) {
 >             c = galAdd a b
 >         c @?= 0
 >         when (a /= 0) $ do
->             let b' = galDivide 1 a
->                 c' = galMultiply a b'
+>             b' <- galDivide 1 a
+>             let c' = galMultiply a b'
 >             c' @?= 1
 
 func TestCommutativity(t *testing.T) {

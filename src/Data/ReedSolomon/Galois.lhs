@@ -6,8 +6,11 @@
 >     , galSub
 >     ) where
 >
+> import Control.Exception.Base (ArithException(DivideByZero))
 > import Data.Bits (xor)
 > import Data.Word (Word8)
+>
+> import Control.Monad.Catch (MonadThrow, throwM)
 >
 > import qualified Data.Vector.Generic as V
 >
@@ -142,10 +145,10 @@ func galDivide(a, b byte) byte {
 	return expTable[logResult]
 }
 
-> galDivide :: Word8 -> Word8 -> Word8
+> galDivide :: MonadThrow m => Word8 -> Word8 -> m Word8
 > galDivide a b
->     | a == 0 = 0
->     | b == 0 = error "Argument 'divisor' is 0"
+>     | a == 0 = return 0
+>     | b == 0 = throwM DivideByZero
 >     | otherwise =
 >         let logA = fromIntegral $ V.unsafeIndex GenTables.logTable (fromIntegral a) in
 >         let logB = fromIntegral $ V.unsafeIndex GenTables.logTable (fromIntegral b) in
@@ -154,7 +157,7 @@ func galDivide(a, b byte) byte {
 >                 if logResult' < 0
 >                 then logResult' + 255
 >                 else logResult' in
->         V.unsafeIndex GenTables.expTable logResult
+>         return $ V.unsafeIndex GenTables.expTable logResult
 
 // Computes a**n.
 //

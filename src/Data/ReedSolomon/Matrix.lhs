@@ -9,11 +9,16 @@
 >
 > import Prelude hiding (break)
 >
+> import Control.Exception.Base (Exception)
 > import Control.Monad (unless, when)
 > import Control.Monad.ST (ST)
+> import Control.Monad.Trans (lift)
 > import Data.Bits (xor)
 > import Data.STRef (newSTRef, readSTRef, writeSTRef)
+> import Data.Typeable (Typeable)
 > import Data.Word (Word8)
+>
+> import Control.Monad.Catch (MonadThrow, throwM)
 >
 > import qualified Data.Vector as V (Vector, MVector)
 > import qualified Data.Vector.Generic as V hiding (Vector)
@@ -23,6 +28,9 @@
 > import Control.Loop (numLoop)
 >
 > import qualified Data.ReedSolomon.Galois as Galois
+> import Data.Vector.Generic.Exceptions (CatchST)
+> import qualified Data.Vector.Generic.Exceptions as VE
+> import qualified Data.Vector.Generic.Lifted as VL
 
 /**
  * Matrix Algebra over an 8-bit Galois Field
@@ -44,6 +52,9 @@ import (
 type matrix [][]byte
 
 > type Matrix = V.Vector (SV.Vector Word8)
+>
+> matrixSize :: Matrix -> (Int, Int)
+> matrixSize m = (V.length m, V.length (V.head m))
 
 // newMatrix returns a matrix of zeros.
 func newMatrix(rows, cols int) (matrix, error) {
@@ -101,6 +112,18 @@ var errInvalidColSize = errors.New("invalid column size")
 // errColSizeMismatch is returned if the size of matrix columns mismatch.
 var errColSizeMismatch = errors.New("column size is not the same for all rows")
 
+> data DimensionMismatch = DimensionMismatch String
+>   deriving (Show, Eq, Typeable)
+> instance Exception DimensionMismatch
+>
+> throwDimensionMismatch :: MonadThrow m => String -> Matrix -> Matrix -> m a
+> throwDimensionMismatch f m1 m2 = throwM $ DimensionMismatch message
+>   where
+>     message = unwords [ "Can't", f
+>                       , "matrix of size", show (matrixSize m1)
+>                       , "with matrix of size", show (matrixSize m2)
+>                       ]
+
 func (m matrix) Check() error {
 	rows := len(m)
 	if rows <= 0 {
@@ -153,10 +176,10 @@ func (m matrix) Multiply(right matrix) (matrix, error) {
 	return result, nil
 }
 
-> multiply :: Matrix -> Matrix -> Matrix
+> multiply :: MonadThrow m => Matrix -> Matrix -> m Matrix
 > multiply m right
->     | V.length (V.head m) /= V.length right = error "Column mismatch"
->     | otherwise =
+>     | V.length (V.head m) /= V.length right = throwDimensionMismatch "multiply" m right
+>     | otherwise = return $
 >         V.generate (V.length m) $ \r ->
 >             V.generate (V.length (V.head right)) $ \c ->
 >                 foldr
@@ -186,10 +209,10 @@ func (m matrix) Augment(right matrix) (matrix, error) {
 	return result, nil
 }
 
-> augment :: Matrix -> Matrix -> Matrix
+> augment :: MonadThrow m => Matrix -> Matrix -> m Matrix
 > augment m right
->     | V.length m /= V.length right = error "Matrix size"
->     | otherwise = V.zipWith (V.++) m right
+>     | V.length m /= V.length right = throwDimensionMismatch "augment" m right
+>     | otherwise = return $ V.zipWith (V.++) m right
 
 // errMatrixSize is returned if matrix dimensions are doesn't match.
 var errMatrixSize = errors.New("matrix sizes does not match")
@@ -237,9 +260,7 @@ func (m matrix) SwapRows(r1, r2 int) error {
 }
 
 > swapRows :: V.MVector s a -> Int -> Int -> ST s ()
-> swapRows m r1 r2
->     | r1 < 0 || MV.length m <= r1 || r2 < 0 || MV.length m <= r2 = error "Invalid row size"
->     | otherwise = MV.unsafeSwap m r1 r2
+> swapRows = MV.swap
 
 
 // IsSquare will return true if the matrix is square
@@ -258,6 +279,10 @@ func (m matrix) IsSquare() bool {
 
 // errSingular is returned if the matrix is singular and cannot be inversed
 var errSingular = errors.New("matrix is singular")
+
+> data SingularMatrix = SingularMatrix
+>   deriving (Show, Eq, Typeable)
+> instance Exception SingularMatrix
 
 // errNotSquare is returned if attempting to inverse a non-square matrix.
 var errNotSquare = errors.New("only square matrices can be inverted")
@@ -282,15 +307,18 @@ func (m matrix) Invert() (matrix, error) {
 	return work.SubMatrix(0, size, size, size*2)
 }
 
-> invert :: Matrix -> Matrix
+> invert :: MonadThrow m => Matrix -> m Matrix
 > invert m
->     | not (isSquare m) = error "Not square"
->     | otherwise =
->         let size = V.length m in
->         let work = identityMatrix size in
->         let work' = augment m work in
->         let work'' = gaussianElimination work' in
->         subMatrix work'' 0 size size (size * 2)
+>     | not (isSquare m) = throwM $ DimensionMismatch
+>                                 $ unwords [ "Can't invert non-square matrix of size"
+>                                           , show (matrixSize m)
+>                                           ]
+>     | otherwise = do
+>         let size = V.length m
+>         let work = identityMatrix size
+>         work' <- augment m work
+>         work'' <- gaussianElimination work'
+>         return $ subMatrix work'' 0 size size (size * 2)
 
 func (m matrix) gaussianElimination() error {
 	rows := len(m)
@@ -347,54 +375,54 @@ func (m matrix) gaussianElimination() error {
 	return nil
 }
 
-> gaussianElimination :: Matrix -> Matrix
-> gaussianElimination = V.modify $ \m -> do
+> gaussianElimination :: MonadThrow m => Matrix -> m Matrix
+> gaussianElimination = VE.modify $ \m -> do
 >     let rows = MV.length m
 >
 >     numLoop 0 (rows - 1) $ \r -> do
 >         mrr <- load m r r
 >         when (mrr == 0) $ do
->             break <- newSTRef False
+>             break <- lift $ newSTRef False
 >             numLoop (r + 1) (rows - 1) $ \rowBelow -> do
->                 doBreak <- readSTRef break
+>                 doBreak <- lift $ readSTRef break
 >                 unless doBreak $ do
 >                     mrowBelowr <- load m rowBelow r
 >                     when (mrowBelowr /= 0) $ do
->                         swapRows m r rowBelow
->                         writeSTRef break True
+>                         lift $ swapRows m r rowBelow
+>                         lift $ writeSTRef break True
 >
 >         mrr' <- load m r r
 >         when (mrr' == 0) $ do
->             error "Singular"
+>             throwM SingularMatrix
 >
 >         when (mrr' /= 1) $ do
->             let scale = Galois.galDivide 1 mrr'
->             mr <- MV.read m r
+>             scale <- Galois.galDivide 1 mrr'
+>             mr <- VL.read m r
 >             let mr' = V.map (\mrc -> Galois.galMultiply mrc scale) mr
->             MV.write m r mr'
+>             VL.write m r mr'
 >
 >         when (rows > r + 1) $ numLoop (r + 1) (rows - 1) $ \rowBelow -> do
 >             mrowBelowr <- load m rowBelow r
 >             when (mrowBelowr /= 0) $ do
 >                 let scale = mrowBelowr
->                 mr <- MV.read m r
->                 mrowBelow <- MV.read m rowBelow
+>                 mr <- VL.read m r
+>                 mrowBelow <- VL.read m rowBelow
 >                 let mrowBelow' = V.zipWith xor mrowBelow (V.map (\mrc -> Galois.galMultiply scale mrc) mr)
->                 MV.write m rowBelow mrowBelow'
+>                 VL.write m rowBelow mrowBelow'
 >
 >     numLoop 0 (rows - 1) $ \d ->
 >         when (d > 0) $ numLoop 0 (d - 1) $ \rowAbove -> do
 >             mrowAboved <- load m rowAbove d
 >             when (mrowAboved /= 0) $ do
 >                 let scale = mrowAboved
->                 mrowAbove <- MV.read m rowAbove
->                 md <- MV.read m d
+>                 mrowAbove <- VL.read m rowAbove
+>                 md <- VL.read m d
 >                 let mrowAbove' = V.zipWith xor mrowAbove (V.map (\mdc -> Galois.galMultiply scale mdc) md)
->                 MV.write m rowAbove mrowAbove'
+>                 VL.write m rowAbove mrowAbove'
 >   where
->     load :: V.MVector s (SV.Vector Word8) -> Int -> Int -> ST s Word8
+>     load :: V.MVector s (SV.Vector Word8) -> Int -> Int -> CatchST s Word8
 >     load m row col = do
->         r <- MV.read m row
+>         r <- VL.read m row
 >         return $ (V.!) r col
 
 // Create a Vandermonde matrix, which is guaranteed to have the
