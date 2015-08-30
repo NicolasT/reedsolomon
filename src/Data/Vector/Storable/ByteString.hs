@@ -1,9 +1,14 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Data.Vector.Storable.ByteString (
       fromByteString
     , toByteString
+    , iso
     ) where
 
 import Data.Word (Word8)
+
+import Data.Profunctor (Profunctor, dimap)
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Internal as I
@@ -22,3 +27,9 @@ toByteString = fromForeignPtr . S.unsafeToForeignPtr
   where
     fromForeignPtr (p, o, l) = I.fromForeignPtr p o l
 {-# INLINE toByteString #-}
+
+type Iso s t a b = forall p f. (Profunctor p, Functor f) => p a (f b) -> p s (f t)
+type Iso' s a = Iso s s a a
+
+iso :: Iso' ByteString (Vector Word8)
+iso = dimap fromByteString (fmap toByteString)
