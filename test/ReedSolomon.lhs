@@ -762,6 +762,26 @@ func TestSplitJoin(t *testing.T) {
 	}
 }
 
+> testSplitJoin :: Assertion
+> testSplitJoin = do
+>     let dataSize = 250000
+>         data_ = V.fromListN dataSize $ randoms $ mkStdGen 0
+>
+>     let Right enc = RS.new 5 3
+>     shards <- RS.split enc data_
+>
+>     let Left err = RS.split enc V.empty
+>     fromException err @?= Just RS.InvalidDataSize
+>
+>     buf <- RS.join enc shards 50
+>     buf @?= V.take 50 data_
+>
+>     let Left err' = RS.join enc V.empty 0
+>     fromException err' @?= Just (RS.InvalidNumberOfShards RS.DataShard 0)
+>
+>     let Left err'' = RS.join enc shards (dataSize + 1)
+>     fromException err'' @?= Just RS.InvalidDataSize
+
 func TestCodeSomeShards(t *testing.T) {
 	var data = make([]byte, 250000)
 	fillRandom(data)
@@ -860,6 +880,24 @@ func TestNew(t *testing.T) {
 >
 >     return $ recovered == allFragments
 
+> splitJoin :: Positive Int -> Gen Bool
+> splitJoin (Positive len) = do
+>     numDataShards <- choose (1, 10)
+>     let numParityShards = 2
+>
+>     let Right r = RS.new numDataShards numParityShards
+>     vec <- V.replicateM len arbitrary
+>
+>     case RS.split r vec of
+>         Left e ->
+>             return $
+>                 if len < numDataShards
+>                 then fromException e == Just RS.InvalidDataSize
+>                 else False
+>         Right parts ->
+>             let Right joined = RS.join r parts len in
+>             return $ joined == vec
+
 > tests :: TestTree
 > tests = testGroup "ReedSolomon" [
 >       testGroup "Unit" [
@@ -868,8 +906,10 @@ func TestNew(t *testing.T) {
 >           , testCase "testVerify" testVerify
 >           , testCase "testOneEncode" testOneEncode
 >           , testCase "testNew" testNew
+>           , testCase "testSplitJoin" testSplitJoin
 >           ]
 >     , testGroup "Properties" [
 >             testProperty "encodeRecover" encodeRecover
+>           , testProperty "splitJoin" splitJoin
 >           ]
 >     ]

@@ -5,6 +5,8 @@
 >     , encode
 >     , verify
 >     , reconstruct
+>     , split
+>     , join
 >     , ShardType(..)
 >     , ValueError(..)
 >     ) where
@@ -134,6 +136,7 @@ type reedSolomon struct {
 > data ValueError = InvalidNumberOfShards ShardType Int
 >                 | EmptyShards
 >                 | InvalidShardSize
+>                 | InvalidDataSize
 >   deriving (Show, Eq, Typeable)
 > instance Exception ValueError
 
@@ -704,6 +707,30 @@ func (r reedSolomon) Split(data []byte) ([][]byte, error) {
 	return dst, nil
 }
 
+> split :: MonadThrow m => Encoder -> SV.Vector Word8 -> m Matrix
+> split r data_
+>     | V.length data_ < rsDataShards r = throwM InvalidDataSize
+>     | otherwise =
+>         let perShard = (V.length data_ + rsDataShards r - 1) `div` rsDataShards r in
+>         -- Note: rsDataShards instead of rsShards: we don't add space for parity
+>         let padding = V.replicate (rsDataShards r * perShard - V.length data_) 0 in
+>         return $ flip (V.unfoldrN (rsDataShards r)) (data_, padding) $ \(rest, padding') ->
+>             if V.null rest
+>             then
+>                 if V.null padding'
+>                 then Nothing
+>                 else
+>                     let (h, t) = V.splitAt perShard padding' in
+>                     Just (h, (rest, t))
+>             else
+>                 if V.length rest >= perShard
+>                 then
+>                     let (h, t) = V.splitAt perShard rest in
+>                     Just (h, (t, padding'))
+>                 else
+>                     let (h, t) = V.splitAt (perShard - V.length rest) padding' in
+>                     Just ((V.++) rest h, (V.empty, t))
+
 // Join the shards and write the data segment to dst.
 //
 // Only the data shards are considered.
@@ -741,3 +768,9 @@ func (r reedSolomon) Join(dst io.Writer, shards [][]byte, outSize int) error {
 	}
 	return nil
 }
+
+> join :: MonadThrow m => Encoder -> Matrix -> Int -> m (SV.Vector Word8)
+> join r shards outSize
+>     | V.length shards < rsDataShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)
+>     | V.sum (V.map V.length shards) < outSize = throwM InvalidDataSize
+>     | otherwise = return $ V.take outSize $ V.concat $ V.toList shards
