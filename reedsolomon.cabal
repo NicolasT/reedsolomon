@@ -21,6 +21,7 @@ Cabal-Version:       >=1.10
 Library
   Hs-Source-Dirs:      src
   Exposed-Modules:     Data.ReedSolomon
+                     , Data.Vector.Storable.ByteString
   Other-Modules:       Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.Amd64
                      , Data.ReedSolomon.Galois.GenTables
@@ -28,7 +29,6 @@ Library
                      , Data.ReedSolomon.Matrix
                      , Data.Vector.Generic.Exceptions
                      , Data.Vector.Generic.Lifted
-                     , Data.Vector.Storable.ByteString
   C-Sources:           cbits/galois_amd64.c
   Build-Depends:       base >= 4.8 && < 4.9
                      , vector >= 0.10 && < 0.11
