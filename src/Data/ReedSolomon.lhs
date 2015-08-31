@@ -1,12 +1,31 @@
 > {-# LANGUAGE ScopedTypeVariables #-}
+> {-# OPTIONS_HADDOCK show-extensions #-}
+>
+> -- |
+> -- Module      : Data.ReedSolomon
+> -- Description : Core Reed-Solomon encoding and reconstruction routines
+> -- Copyright   : (C) 2015 Nicolas Trangez
+> --                   2015 Klaus Post
+> --                   2015 Backblaze
+> -- License     : MIT (see the file LICENSE)
+> -- Maintainer  : Nicolas Trangez <ikke@nicolast.be>
+> -- Stability   : provisional
+> --
+> -- This module implements the core Reed-Solomon data encoding and
+> -- reconstruction routines.
+>
 > module Data.ReedSolomon (
+>     -- * Core API
 >       Encoder
 >     , new
+>     , Matrix
 >     , encode
 >     , verify
 >     , reconstruct
+>     -- * Data conversion utilities
 >     , split
 >     , join
+>     -- * Exceptions
 >     , ShardType(..)
 >     , ValueError(..)
 >     ) where
@@ -120,23 +139,26 @@ type reedSolomon struct {
 	parity       [][]byte
 }
 
+> -- | A Reed-Solomon encoder.
 > data Encoder = Encoder { rsDataShards :: Int
 >                        , rsParityShards :: Int
 >                        , rsShards :: Int
 >                        , rsM :: Matrix
 >                        , rsParity :: Matrix
 >                        }
->   deriving (Show, Eq)
+>   deriving (Show, Eq, Typeable)
 
 > type MMatrix s = V.Vector (SV.MVector s Word8)
 
+> -- | Enumeration of kinds of shards.
 > data ShardType = DataShard | ParityShard | AnyShard
->   deriving (Show, Eq)
+>   deriving (Show, Eq, Bounded, Enum, Typeable)
 >
-> data ValueError = InvalidNumberOfShards ShardType Int
->                 | EmptyShards
->                 | InvalidShardSize
->                 | InvalidDataSize
+> -- | Exception type used to denote invalid input.
+> data ValueError = InvalidNumberOfShards ShardType Int -- ^ Invalid number of shards
+>                 | EmptyShards -- ^ All shards are empty
+>                 | InvalidShardSize -- ^ A shard of invalid size was passed
+>                 | InvalidDataSize -- ^ The length of the passed data is invalid
 >   deriving (Show, Eq, Typeable)
 > instance Exception ValueError
 
@@ -188,7 +210,17 @@ func New(dataShards, parityShards int) (Encoder, error) {
 	return &r, err
 }
 
-> new :: MonadThrow m => Int -> Int -> m Encoder
+> -- | Construct a new 'Encoder'.
+> --
+> -- Throws 'InvalidNumberOfShards' when 'dataShards' or 'parityShards' is out
+> -- of range.
+> --
+> -- An 'Encoder' can safely be reused between encoding and reconstruction
+> -- rounds, as well as shared between threads.
+> new :: MonadThrow m
+>     => Int -- ^ Number of data shards ([0, 255])
+>     -> Int -- ^ Number of parity shards ([0, ])
+>     -> m Encoder
 > new dataShards parityShards
 >     | dataShards <= 0 = throwM (InvalidNumberOfShards DataShard dataShards)
 >     | parityShards <= 0 = throwM (InvalidNumberOfShards ParityShard parityShards)
@@ -238,7 +270,16 @@ func (r reedSolomon) Encode(shards [][]byte) error {
 	return nil
 }
 
-> encode :: MonadThrow m => Encoder -> Matrix -> m Matrix
+> -- | Encode some data shards into parity shards.
+> --
+> -- The number of rows in the given matrix must match the number of data shards
+> -- the 'Encoder' requires, otherwise 'InvalidNumberOfShards' is thrown.
+> -- If all shards are empty, 'EmptyShards' is thrown. Similarly, when shards
+> -- are of inconsistent length, 'InvalidShardSize' is thrown.
+> encode :: MonadThrow m
+>        => Encoder -- ^ Encoder to use
+>        -> Matrix -- ^ Data shards
+>        -> m Matrix
 > encode r shards
 >     | V.length shards /= rsDataShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)
 >     | Left e <- checkShards shards False = throwM e
@@ -265,6 +306,10 @@ func (r reedSolomon) Verify(shards [][]byte) (bool, error) {
 	return r.checkSomeShards(r.parity, shards[0:r.DataShards], toCheck, r.ParityShards, len(shards[0])), nil
 }
 
+> -- | Verify the code chunks against the data.
+> --
+> -- This function will re-encode the data chunks, and validate the code chunks
+> -- in the given 'Matrix' are equal.
 > verify :: MonadThrow m => Encoder -> Matrix -> m Bool
 > verify r shards
 >     | V.length shards /= rsShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)
@@ -578,7 +623,11 @@ func (r reedSolomon) Reconstruct(shards [][]byte) error {
 	return nil
 }
 
-> reconstruct :: MonadThrow m => Encoder -> V.Vector (Maybe (SV.Vector Word8)) -> m Matrix
+> -- | Reconstruct partial data.
+> reconstruct :: MonadThrow m
+>             => Encoder -- ^ Encoder to use
+>             -> V.Vector (Maybe (SV.Vector Word8)) -- ^ Partial data and parity shards
+>             -> m Matrix -- ^ Reconstructed data and parity shards
 > reconstruct r shards0
 >     | V.length shards0 /= rsShards r = throwM (InvalidNumberOfShards AnyShard $ V.length shards0)
 >     | Left e <- checkShards shards0' True = throwM e
@@ -707,6 +756,9 @@ func (r reedSolomon) Split(data []byte) ([][]byte, error) {
 	return dst, nil
 }
 
+> -- | Split data into shards that can be encoded by the given 'Encoder'.
+> --
+> -- If required, the last shard is padded with zeros to match size.
 > split :: MonadThrow m => Encoder -> SV.Vector Word8 -> m Matrix
 > split r data_
 >     | V.length data_ < rsDataShards r = throwM InvalidDataSize
@@ -769,6 +821,11 @@ func (r reedSolomon) Join(dst io.Writer, shards [][]byte, outSize int) error {
 	return nil
 }
 
+> -- | Join shards into a single 'Data.Vector.Storable.Vector' of given size.
+> --
+> -- Note: This function concatenates all data through copies, which is
+> -- inefficient. When writing the data to a file or socket, consider doing
+> -- so without joining in-memory.
 > join :: MonadThrow m => Encoder -> Matrix -> Int -> m (SV.Vector Word8)
 > join r shards outSize
 >     | V.length shards < rsDataShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)

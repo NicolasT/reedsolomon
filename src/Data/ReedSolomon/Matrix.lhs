@@ -51,6 +51,7 @@ import (
 // byte[row][col]
 type matrix [][]byte
 
+> -- | A row-major 'Matrix' of bytes.
 > type Matrix = V.Vector (SV.Vector Word8)
 >
 > matrixSize :: Matrix -> (Int, Int)
