@@ -1,12 +1,14 @@
+> {-# LANGUAGE DataKinds #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
+> {-# OPTIONS_GHC -fno-warn-orphans #-}
 > module Galois (tests) where
 >
 > import Prelude hiding (LT)
 >
 > import Control.Monad (foldM, void, when)
 > import Data.Word (Word8)
->
 > import Foreign.C (CSize(..))
+> import GHC.TypeLits (KnownNat)
 >
 > import Control.Loop (numLoop)
 >
@@ -20,6 +22,7 @@
 >
 > import qualified Test.QuickCheck as QC
 >
+> import qualified Data.Vector.Generic.Sized as S
 > import Data.ReedSolomon.Galois
 > import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
 > import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
@@ -308,11 +311,8 @@ func TestGalois(t *testing.T) {
 >             return out' in
 >     noasm == amd64
 
-> newtype LookupTable = LT (SV.Vector Word8)
->   deriving (Show, Eq)
->
-> instance QC.Arbitrary LookupTable where
->     arbitrary = (LT . SV.fromListN 16) `fmap` QC.vector 16
+> instance (KnownNat n, V.Vector v a, QC.Arbitrary a) => QC.Arbitrary (S.Vector v n a) where
+>     arbitrary = S.replicateM QC.arbitrary
 >
 > newtype Input = I (SV.Vector Word8)
 >   deriving (Show, Eq)
@@ -325,15 +325,15 @@ func TestGalois(t *testing.T) {
 >
 > reedsolomonGalMulEquivalence :: Amd64.CProto
 >                              -> Amd64.CProto
->                              -> LookupTable
->                              -> LookupTable
+>                              -> S.SVector 16 Word8
+>                              -> S.SVector 16 Word8
 >                              -> Input
 >                              -> Bool
 > reedsolomonGalMulEquivalence f g low high in_ =
 >     run f low high in_ == run g low high in_
 >   where
->     run :: Amd64.CProto -> LookupTable -> LookupTable -> Input -> SV.Vector Word8
->     run e (LT l) (LT h) (I i) = V.create $ do
+>     run :: Amd64.CProto -> S.SVector 16 Word8 -> S.SVector 16 Word8 -> Input -> SV.Vector Word8
+>     run e l h (I i) = V.create $ do
 >         let len = V.length i
 >         r <- MV.new len
 >         done <- Amd64.cProtoToPrim e l h i r

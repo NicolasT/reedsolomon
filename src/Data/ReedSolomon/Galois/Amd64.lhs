@@ -1,3 +1,4 @@
+> {-# LANGUAGE DataKinds #-}
 > module Data.ReedSolomon.Galois.Amd64 (
 >       galMulSlice
 >     , galMulSliceXor
@@ -19,6 +20,7 @@
 > import qualified Data.Vector.Storable as V hiding (unsafeIndex)
 > import qualified Data.Vector.Storable.Mutable as MV
 >
+> import qualified Data.Vector.Generic.Sized as S
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
 
 //+build !noasm
@@ -71,15 +73,14 @@ func galMulSlice(c byte, in, out []byte) {
 
 > galMulSlice :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSlice c in_ out = do
->     let c' = fromIntegral c
->         mtlc = V.unsafeIndex GenTables.mulTableLow c'
->         mthc = V.unsafeIndex GenTables.mulTableHigh c'
+>     let mtlc = S.index GenTables.mulTableLow c
+>         mthc = S.index GenTables.mulTableHigh c
 >         len = V.length in_
 >     done <- fromIntegral `fmap` galMulSSSE3 mtlc mthc in_ out
 >     when (done /= len) $ do
->         let mt = V.unsafeIndex GenTables.mulTable c'
+>         let mt = S.index GenTables.mulTable c
 >         numLoop done (len - 1) $ \i ->
->             MV.unsafeWrite out i (V.unsafeIndex mt (fromIntegral $ V.unsafeIndex in_ i))
+>             MV.unsafeWrite out i (S.index mt (V.unsafeIndex in_ i))
 >   where
 >     galMulSSSE3 = cProtoToPrim c_reedsolomon_gal_mul
 > {-# INLINE galMulSlice #-}
@@ -101,16 +102,15 @@ func galMulSliceXor(c byte, in, out []byte) {
 
 > galMulSliceXor :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSliceXor c in_ out = do
->     let c' = fromIntegral c
->         mtlc = V.unsafeIndex GenTables.mulTableLow c'
->         mthc = V.unsafeIndex GenTables.mulTableHigh c'
+>     let mtlc = S.index GenTables.mulTableLow c
+>         mthc = S.index GenTables.mulTableHigh c
 >         len = min (V.length in_) (MV.length out)
 >     done <- fromIntegral `fmap` galMulSSSE3Xor mtlc mthc in_ out
 >     when (done /= len) $ do
->         let mt = V.unsafeIndex GenTables.mulTable c'
+>         let mt = S.index GenTables.mulTable c
 >         numLoop done (len - 1) $ \i -> do
 >             r <- MV.unsafeRead out i
->             let m = V.unsafeIndex mt (fromIntegral $ V.unsafeIndex in_ i)
+>             let m = S.index mt (V.unsafeIndex in_ i)
 >                 r' = r `xor` m
 >             MV.unsafeWrite out i r'
 >   where
@@ -121,16 +121,16 @@ func galMulSliceXor(c byte, in, out []byte) {
 >
 > cProtoToPrim :: PrimMonad m
 >              => CProto
->              -> V.Vector Word8
->              -> V.Vector Word8
+>              -> S.SVector 16 Word8
+>              -> S.SVector 16 Word8
 >              -> V.Vector Word8
 >              -> V.MVector (PrimState m) Word8
 >              -> m CSize
 > cProtoToPrim inner low high in_ out@(MV.MVector ol op) = do
 >     let len = fromIntegral $ min (V.length in_) (MV.length out)
 >     unsafePrimToPrim $ -- TODO Safe?
->         V.unsafeWith low $ \low' ->
->         V.unsafeWith high $ \high' ->
+>         S.unsafeWith low $ \low' ->
+>         S.unsafeWith high $ \high' ->
 >         V.unsafeWith in_ $ \in_' ->
 >         MV.unsafeWith (MV.MVector ol op) $ \out' ->
 >         inner low' high' in_' out' len

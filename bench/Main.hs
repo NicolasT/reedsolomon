@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 module Main (main) where
 
@@ -12,6 +14,7 @@ import qualified Data.Vector.Generic as V
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Vector.Storable as SV
 
+import qualified Data.Vector.Generic.Sized as S
 import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
 import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
 
@@ -48,13 +51,13 @@ main = defaultMain [
         return out
       where
         f' :: forall s.
-              SV.Vector Word8
-           -> SV.Vector Word8
+              S.SVector 16 Word8
+           -> S.SVector 16 Word8
            -> SV.Vector Word8
            -> SV.MVector s Word8
            -> ST s CSize
         f' = Amd64.cProtoToPrim f
-        v16 = V.fromList [0 .. 15]
+        v16 = [0 .. 15]
 
 type CProto = Amd64.CProto
 foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto

@@ -21,6 +21,7 @@ Cabal-Version:       >=1.10
 Library
   Hs-Source-Dirs:      src
   Exposed-Modules:     Data.ReedSolomon
+                     , Data.Vector.Generic.Sized
   Other-Modules:       Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.Amd64
                      , Data.ReedSolomon.Galois.GenTables
@@ -76,6 +77,7 @@ Test-Suite reedsolomon-test
                      , Data.ReedSolomon.Matrix
                      , Data.Vector.Generic.Exceptions
                      , Data.Vector.Generic.Lifted
+                     , Data.Vector.Generic.Sized
                      , Data.Vector.Storable.ByteString
   Build-Depends:       base
                      , vector

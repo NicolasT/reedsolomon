@@ -14,6 +14,7 @@
 >
 > import qualified Data.Vector.Generic as V
 >
+> import qualified Data.Vector.Generic.Sized as S
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
 
 /**
@@ -112,8 +113,8 @@ func galMultiply(a, b byte) byte {
 
 > galMultiply :: Word8 -> Word8 -> Word8
 > galMultiply a b =
->     let row = V.unsafeIndex GenTables.mulTable (fromIntegral a) in
->     V.unsafeIndex row (fromIntegral b)
+>     let row = S.index GenTables.mulTable a in
+>     S.index row b
 
 // Original function:
 /*
@@ -150,14 +151,14 @@ func galDivide(a, b byte) byte {
 >     | a == 0 = return 0
 >     | b == 0 = throwM DivideByZero
 >     | otherwise =
->         let logA = fromIntegral $ V.unsafeIndex GenTables.logTable (fromIntegral a) in
->         let logB = fromIntegral $ V.unsafeIndex GenTables.logTable (fromIntegral b) in
+>         let logA = fromIntegral $ S.index GenTables.logTable a in
+>         let logB = fromIntegral $ S.index GenTables.logTable b in
 >         let logResult =
 >                 let logResult' = logA - logB in
 >                 if logResult' < 0
 >                 then logResult' + 255
 >                 else logResult' in
->         return $ V.unsafeIndex GenTables.expTable logResult
+>         return $ V.unsafeIndex (S.toVector GenTables.expTable) logResult
 
 // Computes a**n.
 //
@@ -183,10 +184,10 @@ func galExp(a byte, n int) byte {
 >     | n == 0 = 1
 >     | a == 0 = 0
 >     | otherwise =
->         let logA = V.unsafeIndex GenTables.logTable (fromIntegral a) in
+>         let logA = S.index GenTables.logTable a in
 >         let logResult =
 >                 let logResult' = fromIntegral logA * n in
 >                 let loop i | i >= 255 = loop (i - 255)
 >                            | otherwise = i in
 >                 loop logResult' in
->         V.unsafeIndex GenTables.expTable logResult
+>         V.unsafeIndex (S.toVector GenTables.expTable) logResult

@@ -1,5 +1,8 @@
+> {-# LANGUAGE DataKinds #-}
 > {-# LANGUAGE FlexibleContexts #-}
+> {-# LANGUAGE OverloadedLists #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
+> {-# LANGUAGE TypeOperators #-}
 > module Data.ReedSolomon.Galois.GenTables (
 >       expTable
 >     , logTable
@@ -13,7 +16,11 @@
 > import Control.Monad (when)
 > import Control.Monad.ST (runST)
 > import Data.Bits ((.&.), shiftR)
-> import Data.Word (Word8, Word16)
+> import Data.Maybe (fromJust)
+> import Data.Proxy
+> import Data.Word (Word8)
+>
+> import GHC.TypeLits
 >
 > import qualified Data.Vector as V (Vector)
 > import Data.Vector.Generic ((!))
@@ -23,6 +30,8 @@
 > import qualified Data.Vector.Storable as SV
 >
 > import Control.Loop (numLoop)
+>
+> import qualified Data.Vector.Generic.Sized as S
 
 //+build ignore
 
@@ -34,8 +43,8 @@ import (
 
 var logTable = [fieldSize]int16{
 
-> logTable :: UV.Vector Word16
-> logTable = UV.fromList [
+> logTable :: S.UVector FieldSize Word8
+> logTable = [
 > 	-1, 0, 1, 25, 2, 50, 26, 198,
 > 	3, 223, 51, 238, 27, 104, 199, 75,
 > 	4, 100, 224, 14, 52, 141, 239, 129,
@@ -75,8 +84,9 @@ var logTable = [fieldSize]int16{
 const (
 	// The number of elements in the field.
 
+> type FieldSize = 256
 > fieldSize :: Int
-> fieldSize = 256
+> fieldSize = fromInteger $ natVal (Proxy :: Proxy FieldSize)
 
 	// The polynomial used to generate the logarithm table.
 	//
@@ -112,12 +122,12 @@ func generateExpTable() []byte {
 	return result
 }
 
-> expTable :: UV.Vector Word8
-> expTable = V.create $ do
+> expTable :: S.UVector (FieldSize * 2 - 2) Word8
+> Just expTable = S.fromVector $ UV.create $ do
 >     result <- MV.new $ fieldSize * 2 - 2
 >     numLoop 1 (fieldSize - 1) $ \i -> do
->         let log = fromIntegral $ logTable ! i
->         MV.write result log (fromIntegral i)
+>         let log = fromIntegral $ S.index logTable (fromIntegral i :: Word8)
+>         MV.write result log (fromIntegral i :: Word8)
 >         MV.write result (log + fieldSize - 1) (fromIntegral i)
 >     return result
 
@@ -153,16 +163,16 @@ func generateMulTableSplit(expTable []byte) [256][256]byte {
 	return result
 }
 
-> mulTable :: V.Vector (UV.Vector Word8)
+> mulTable :: S.Vector V.Vector FieldSize (S.UVector FieldSize Word8)
 > mulTable =
->     V.generate 256 $ \a ->
->         V.generate 256 $ \b ->
+>     S.generate $ \a ->
+>         S.generate $ \b ->
 >             if (a == 0 || b == 0)
 >             then 0
 >             else
->                 let logA = fromIntegral $ logTable ! a in
->                 let logB = fromIntegral $ logTable ! b in
->                 expTable ! (logA + logB)
+>                 let logA = fromIntegral $ S.index logTable (fromIntegral a :: Word8) in
+>                 let logB = fromIntegral $ S.index logTable (fromIntegral b :: Word8) in
+>                 S.toVector expTable ! (logA + logB)
 
 func generateMulTableHalf(expTable []byte) (low [256][16]byte, high [256][16]byte) {
 	for a := range low {
@@ -184,8 +194,8 @@ func generateMulTableHalf(expTable []byte) (low [256][16]byte, high [256][16]byt
 	return
 }
 
-> mulTableLow, mulTableHigh :: V.Vector (SV.Vector Word8)
-> (mulTableLow, mulTableHigh) = runST $ do
+> mulTableLow, mulTableHigh :: S.Vector V.Vector FieldSize (S.SVector 16 Word8)
+> (mulTableLow, mulTableHigh) = (\(v1, v2) -> (fixup2 v1, fixup2 v2)) $ runST $ do
 >     low :: V.Vector (SV.MVector s Word8) <- V.replicateM 256 (MV.replicate 16 0)
 >     high :: V.Vector (SV.MVector s Word8) <- V.replicateM 256 (MV.replicate 16 0)
 >
@@ -194,9 +204,9 @@ func generateMulTableHalf(expTable []byte) (low [256][16]byte, high [256][16]byt
 >             let result :: Int =
 >                     if not (a == 0 || b == 0)
 >                     then
->                         let logA = fromIntegral $ logTable ! a in
->                         let logB = fromIntegral $ logTable ! b in
->                         fromIntegral $ expTable ! (logA + logB)
+>                         let logA = fromIntegral $ S.index logTable (fromIntegral a :: Word8) in
+>                         let logB = fromIntegral $ S.index logTable (fromIntegral b :: Word8) in
+>                         fromIntegral $ S.toVector expTable ! (logA + logB)
 >                     else 0
 >
 >             when (b .&. 0xf == b) $
@@ -208,3 +218,4 @@ func generateMulTableHalf(expTable []byte) (low [256][16]byte, high [256][16]byt
 >     (,) <$> fixup low <*> fixup high
 >   where
 >     fixup v = V.generateM (V.length v) $ \i -> V.unsafeFreeze (v ! i)
+>     fixup2 = fromJust . S.fromVector . V.map (fromJust . S.fromVector)
