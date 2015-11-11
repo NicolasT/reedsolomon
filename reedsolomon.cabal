@@ -60,6 +60,18 @@ Executable reedsolomon-simple-decoder
                      , reedsolomon
   Default-Language:    Haskell2010
 
+Executable reedsolomon-simple-bench
+  Hs-Source-Dirs:      examples
+  Main-Is:             simple-bench.hs
+  Ghc-Options:         -rtsopts -Wall -O2 -fllvm -g
+  Build-Depends:       base
+                     , vector
+                     , random >= 1.1 && < 1.2
+                     , criterion >= 1.1 && < 1.2
+                     , statistics >= 0.13 && < 0.14
+                     , reedsolomon
+  Default-Language:    Haskell2010
+
 Test-Suite reedsolomon-test
   Type:                exitcode-stdio-1.0
   Hs-Source-Dirs:      test
