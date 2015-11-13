@@ -1,4 +1,22 @@
 > module Main (main) where
+>
+> import Control.Monad (forM_, when)
+> import Data.Maybe (fromMaybe)
+> import Text.Printf (printf)
+>
+> import System.FilePath (joinPath, takeDirectory, takeFileName)
+>
+> import qualified Data.ByteString as BS
+>
+> import qualified Data.Vector.Generic as V
+>
+> import Options.Applicative
+>
+> import System.IO.Posix.MMap (unsafeMMapFile)
+>
+> import Data.Vector.Storable.ByteString (fromByteString, toByteString)
+>
+> import qualified Data.ReedSolomon as RS
 
 //+build ignore
 
@@ -51,6 +69,39 @@ var dataShards = flag.Int("data", 4, "Number of shards to split the data into, m
 var parShards = flag.Int("par", 2, "Number of parity shards")
 var outDir = flag.String("out", "", "Alternative output directory")
 
+> data Options = Options { optionsData :: Int
+>                        , optionsPar :: Int
+>                        , optionsOut :: Maybe FilePath
+>                        , optionsFname :: FilePath
+>                        }
+>   deriving (Show, Eq)
+>
+> parser :: Parser Options
+> parser =  Options
+>       <$> option auto
+>             ( long "data"
+>            <> metavar "N"
+>            <> value 4
+>            <> showDefault
+>            <> help "Number of shards to split the data into, must be below 257."
+>             )
+>       <*> option auto
+>             ( long "par"
+>            <> metavar "K"
+>            <> value 2
+>            <> showDefault
+>            <> help "Number of parity shards"
+>             )
+>       <*> optional (strOption
+>             ( long "out"
+>            <> metavar "PATH"
+>            <> help "Alternative output directory"
+>             ))
+>       <*> strArgument
+>             ( metavar "FILE"
+>            <> help "File to encode"
+>             )
+
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -61,8 +112,15 @@ func init() {
 }
 
 func main() {
+
+> main :: IO ()
+> main = do
+
 	// Parse command line parameters.
 	flag.Parse()
+
+>     options <- execParser $ info (helper <*> parser) mempty
+
 	args := flag.Args()
 	if len(args) != 1 {
 		fmt.Fprintf(os.Stderr, "Error: No input filename given\n")
@@ -73,30 +131,56 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: Too many data shards\n")
 		os.Exit(1)
 	}
+
+>     when (optionsData options > 256) $
+>         error "Too many data shards"
+
 	fname := args[0]
+
+>     let fname = optionsFname options
+>         dataShards = optionsData options
+>         parShards = optionsPar options
 
 	// Create encoding matrix.
 	enc, err := reedsolomon.New(*dataShards, *parShards)
 	checkErr(err)
 
+>     enc <- RS.new dataShards parShards
+
 	fmt.Println("Opening", fname)
 	b, err := ioutil.ReadFile(fname)
 	checkErr(err)
 
+>     printf "Opening %s\n" fname
+>     b <- fromByteString `fmap` unsafeMMapFile fname
+
 	// Split the file into equally sized shards.
 	shards, err := enc.Split(b)
 	checkErr(err)
+
+>     shards <- RS.split enc b
+
 	fmt.Printf("File split into %d data+parity shards with %d bytes/shard.\n", len(shards), len(shards[0]))
+
+>     printf "File split into %d data shards with %d bytes/shard.\n"
+>         (V.length shards) (V.length $ V.head shards)
 
 	// Encode parity
 	err = enc.Encode(shards)
 	checkErr(err)
+
+>     parities <- RS.encode enc shards
+>     let shards' = (V.++) shards parities
 
 	// Write out the resulting files.
 	dir, file := filepath.Split(fname)
 	if *outDir != "" {
 		dir = *outDir
 	}
+
+>     let dir = fromMaybe (takeDirectory fname) (optionsOut options)
+>         file = takeFileName fname
+
 	for i, shard := range shards {
 		outfn := fmt.Sprintf("%s.%d", file, i)
 
@@ -104,10 +188,14 @@ func main() {
 		err = ioutil.WriteFile(filepath.Join(dir, outfn), shard, os.ModePerm)
 		checkErr(err)
 	}
-}
 
-> main :: IO ()
-> main = error "Not implemented"
+>     forM_ (zip [(0 :: Int)..] (V.toList shards')) $ \(i, shard) -> do
+>         let outfn = concat [file, ".", show i]
+>
+>         printf "Writing to %s\n" outfn
+>         BS.writeFile (joinPath [dir, outfn]) (toByteString shard)
+
+}
 
 func checkErr(err error) {
 	if err != nil {

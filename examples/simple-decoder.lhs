@@ -1,4 +1,23 @@
 > module Main (main) where
+>
+> import Control.Exception (catchJust, fromException)
+> import Control.Monad (when)
+> import Data.Maybe (fromMaybe)
+> import Text.Printf (printf)
+> import System.IO (IOMode(WriteMode), withFile)
+> import System.IO.Error (ioeGetErrorType, isDoesNotExistErrorType)
+>
+> import System.IO.Posix.MMap (unsafeMMapFile)
+>
+> import Options.Applicative
+>
+> import qualified Data.ByteString as BS
+>
+> import qualified Data.Vector.Generic as V
+>
+> import Data.Vector.Storable.ByteString (fromByteString, toByteString)
+>
+> import qualified Data.ReedSolomon as RS
 
 //+build ignore
 
@@ -49,6 +68,39 @@ var dataShards = flag.Int("data", 4, "Number of shards to split the data into")
 var parShards = flag.Int("par", 2, "Number of parity shards")
 var outFile = flag.String("out", "", "Alternative output path/file")
 
+> data Options = Options { optionsData :: Int
+>                        , optionsPar :: Int
+>                        , optionsOut :: Maybe FilePath
+>                        , optionsFname :: FilePath
+>                        }
+>   deriving (Show, Eq)
+>
+> parser :: Parser Options
+> parser =  Options
+>       <$> option auto
+>             ( long "data"
+>            <> metavar "N"
+>            <> value 4
+>            <> showDefault
+>            <> help "Number of shards to split the data into, must be below 257."
+>             )
+>       <*> option auto
+>             ( long "par"
+>            <> metavar "K"
+>            <> value 2
+>            <> showDefault
+>            <> help "Number of parity shards"
+>             )
+>       <*> optional (strOption
+>             ( long "out"
+>            <> metavar "PATH"
+>            <> help "Alternative output directory"
+>             ))
+>       <*> strArgument
+>             ( metavar "FILE"
+>            <> help "File to encode"
+>             )
+
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -59,8 +111,15 @@ func init() {
 }
 
 func main() {
+
+> main :: IO ()
+> main = do
+
 	// Parse flags
 	flag.Parse()
+
+>     options <- execParser $ info (helper <*> parser) mempty
+
 	args := flag.Args()
 	if len(args) != 1 {
 		fmt.Fprintf(os.Stderr, "Error: No filenames given\n")
@@ -69,9 +128,15 @@ func main() {
 	}
 	fname := args[0]
 
+>     let fname = optionsFname options
+>         dataShards = optionsData options
+>         parShards = optionsPar options
+
 	// Create matrix
 	enc, err := reedsolomon.New(*dataShards, *parShards)
 	checkErr(err)
+
+>     enc <- RS.new dataShards parShards
 
 	// Create shards and load the data.
 	shards := make([][]byte, *dataShards+*parShards)
@@ -85,23 +150,64 @@ func main() {
 		}
 	}
 
+>     shards <- V.generateM (dataShards + parShards) $ \i -> do
+>         let infn = concat [fname, ".", show i]
+>         printf "Opening %s\n" infn
+>         catchJust
+>             (\e ->
+>                 if isDoesNotExistErrorType (ioeGetErrorType e)
+>                 then Just ()
+>                 else Nothing)
+>             ((Just . fromByteString) `fmap` unsafeMMapFile infn)
+>             (\() -> return Nothing)
+
 	// Verify the shards
 	ok, err := enc.Verify(shards)
+
+>     ok <- catchJust
+>             (\e -> case fromException e of
+>                 Just RS.InvalidShardSize -> Just False
+>                 _ -> Nothing)
+>             (RS.verify enc (V.map (fromMaybe V.empty) shards))
+>             return
+
 	if ok {
 		fmt.Println("No reconstruction needed")
+
+>     shards' <- if ok
+>     then do
+>         printf "No reconstruction needed\n"
+>         return (V.map (fromMaybe V.empty) shards)
+
 	} else {
 		fmt.Println("Verification failed. Reconstructing data")
+
+>     else do
+>         printf "Verification failed. Reconstructing data\n"
+
 		err = enc.Reconstruct(shards)
 		if err != nil {
 			fmt.Println("Reconstruct failed -", err)
 			os.Exit(1)
 		}
+
+>         shards' <- RS.reconstruct enc shards
+
 		ok, err = enc.Verify(shards)
+
+>         ok' <- RS.verify enc shards'
+
 		if !ok {
 			fmt.Println("Verification failed after reconstruction, data likely corrupted.")
 			os.Exit(1)
 		}
 		checkErr(err)
+
+>         when (not ok') $
+>             error "Verification failed after reconstruction, data likely corrupted."
+>
+>         return shards'
+
 	}
 
 	// Join the shards and write them
@@ -110,17 +216,25 @@ func main() {
 		outfn = fname
 	}
 
+>     let outfn = fromMaybe fname (optionsOut options)
+
 	fmt.Println("Writing data to", outfn)
+
+>     printf "Writing data to %s\n" outfn
+
 	f, err := os.Create(outfn)
 	checkErr(err)
+
+>     withFile outfn WriteMode $ \f -> do
 
 	// We don't know the exact filesize.
 	err = enc.Join(f, shards, len(shards[0])**dataShards)
 	checkErr(err)
-}
 
-> main :: IO ()
-> main = error "Not implemented"
+>         V.forM_ (V.take dataShards shards') $
+>             BS.hPut f . toByteString
+
+}
 
 func checkErr(err error) {
 	if err != nil {

@@ -50,6 +50,11 @@ Executable reedsolomon-simple-encoder
   Main-Is:             simple-encoder.lhs
   Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
   Build-Depends:       base
+                     , bytestring
+                     , vector
+                     , optparse-applicative >= 0.11 && < 0.12
+                     , filepath >= 1.4 && < 1.5
+                     , bytestring-mmap >= 0.2 && < 0.3
                      , reedsolomon
   Default-Language:    Haskell2010
 
@@ -58,6 +63,11 @@ Executable reedsolomon-simple-decoder
   Main-Is:             simple-decoder.lhs
   Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
   Build-Depends:       base
+                     , bytestring
+                     , vector
+                     , optparse-applicative >= 0.11 && < 0.12
+                     , filepath >= 1.4 && < 1.5
+                     , bytestring-mmap >= 0.2 && < 0.3
                      , reedsolomon
   Default-Language:    Haskell2010
 
