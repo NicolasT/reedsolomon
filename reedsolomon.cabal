@@ -28,6 +28,7 @@ Library
                      , Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Galois.NoAsm
                      , Data.ReedSolomon.Matrix
+                     , Data.Vector.Generic.Compat
                      , Data.Vector.Generic.Exceptions
                      , Data.Vector.Generic.Lifted
   C-Sources:           cbits/galois_amd64.c

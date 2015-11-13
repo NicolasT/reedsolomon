@@ -31,7 +31,6 @@
 >     ) where
 >
 > import Control.Exception.Base (Exception)
-> import Control.Monad (when)
 > import Control.Monad.ST (ST, runST)
 > import Control.Monad.Trans (lift)
 > import Data.Maybe (fromJust, fromMaybe)
@@ -50,6 +49,7 @@
 > import Data.ReedSolomon.Matrix (Matrix)
 > import qualified Data.ReedSolomon.Matrix as Matrix
 > import Data.ReedSolomon.Galois.Amd64 (galMulSlice, galMulSliceXor)
+> import qualified Data.Vector.Generic.Compat as VC
 > import qualified Data.Vector.Generic.Exceptions as VE
 > import qualified Data.Vector.Generic.Lifted as VL
 
@@ -345,15 +345,13 @@ func (r reedSolomon) codeSomeShards(matrixRows, inputs, outputs [][]byte, output
 }
 
 > codeSomeShards :: Encoder -> Matrix -> Matrix -> MMatrix s -> Int -> Int -> ST s ()
-> codeSomeShards r matrixRows inputs outputs outputCount _byteCount = do
->     numLoop 0 (rsDataShards r - 1) $ \c -> do
->         let in_ = V.unsafeIndex inputs c
->         when (outputCount > 0) $ numLoop 0 (outputCount - 1) $ \iRow -> do
+> codeSomeShards _r matrixRows inputs outputs _outputCount _byteCount = do
+>     VC.iforM_ inputs $ \c in_ -> {-# SCC "codeSomeShards:dataShards" #-} do
+>         VC.iforM_ outputs $ \iRow oi -> {-# SCC "codeSomeShards:parityShards" #-} do
 >             let mic = V.unsafeIndex (V.unsafeIndex matrixRows iRow) c
->                 oi = V.unsafeIndex outputs iRow
 >             if (c == 0)
->             then galMulSlice mic in_ oi
->             else galMulSliceXor mic in_ oi
+>             then {-# SCC "codeSomeShards:galMulSlice" #-} galMulSlice mic in_ oi
+>             else {-# SCC "codeSomeShards:galMulSliceXor" #-} galMulSliceXor mic in_ oi
 
 // How many bytes per goroutine.
 const splitSize = 512
