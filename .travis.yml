@@ -1,0 +1,34 @@
+language: haskell
+
+sudo: false
+cache:
+  directories:
+    - $HOME/.stack/
+
+before_install:
+  - mkdir -p ~/.local/bin/
+  - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  - export PATH=~/.local/bin:$PATH
+
+  - export PATH=/opt/ghc/7.10.2/bin:$PATH
+
+addons:
+  apt:
+    sources:
+      - hvr-ghc
+      - llvm-toolchain-precise-3.5
+      - ubuntu-toolchain-r-test
+    packages:
+      - libgmp-dev
+      - ghc-7.10.2
+      - llvm-3.5
+      - llvm-3.5-runtime
+      - libllvm3.5
+      - gcc-5
+
+install:
+  - ./.travis_long stack --no-terminal --skip-ghc-check setup
+  - ./.travis_long stack --no-terminal --skip-ghc-check build --ghc-options "-pgmc gcc-5 -pgmlo opt-3.5 -pgmlc llc-3.5" --test --bench --only-snapshot
+
+script:
+  - stack --no-terminal --skip-ghc-check build --pedantic --ghc-options "-pgmc gcc-5 -pgmlo opt-3.5 -pgmlc llc-3.5" --test --bench --no-run-benchmarks
