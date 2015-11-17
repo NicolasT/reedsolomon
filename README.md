@@ -1,6 +1,10 @@
 # Reed-Solomon
+[![Build Status][3]][4]
 
-Reed-Solomon Erasure Coding in Haskell.
+[3]: https://travis-ci.org/NicolasT/reedsolomon.svg?branch=master
+[4]: https://travis-ci.org/NicolasT/reedsolomon
+
+Reed-Solomon Erasure Coding in Haskell, with speeds exceeding 1GB/s/cpu core implemented in pure Haskell (and some SIMD C/assembler).
 
 This is a Haskell port of the [GolangReedSolomon](https://github.com/klauspost/reedsolomon) library released by [Klaus Post](http://klauspost.com/), wich is a port of the [JavaReedSolomon](https://github.com/Backblaze/JavaReedSolomon) library released by [Backblaze](http://backblaze.com), with some additional optimizations.
 
