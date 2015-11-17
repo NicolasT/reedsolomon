@@ -83,6 +83,19 @@ Executable reedsolomon-simple-bench
                      , reedsolomon
   Default-Language:    Haskell2010
 
+Executable reedsolomon-profiling
+  Hs-Source-Dirs:      bench
+  Main-Is:             profiling.hs
+  Ghc-Options:         -rtsopts -Wall -O2 -fllvm -g
+  Build-Depends:       base
+                     , vector
+                     , deepseq >= 1.4 && < 1.5
+                     , random >= 1.1 && < 1.2
+                     , optparse-applicative >= 0.11 && < 0.12
+                     , clock >= 0.5 && < 0.6
+                     , reedsolomon
+  Default-Language:    Haskell2010
+
 Test-Suite reedsolomon-test
   Type:                exitcode-stdio-1.0
   Hs-Source-Dirs:      test
