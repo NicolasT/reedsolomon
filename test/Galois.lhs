@@ -268,15 +268,15 @@ func TestGalois(t *testing.T) {
 >     Amd64.galMulSlice 25 in_ out2
 >     let expect = V.fromList [0x0, 0x19, 0x32, 0x2b, 0x64, 0x7d, 0x56, 0xfa, 0xb8, 0x6d, 0xc7, 0x85, 0xc3, 0x1f, 0x22, 0x7, 0x25, 0xfe]
 >     out' :: SV.Vector Word8 <- V.freeze out
->     out2' :: SV.Vector Word8 <- V.freeze out
+>     out2' :: SV.Vector Word8 <- V.freeze out2
 >     out' @?= expect
 >     out2' @?= expect
 >
 >     NoAsm.galMulSlice 177 in_ out
->     Amd64.galMulSlice 177 in_ out
+>     Amd64.galMulSlice 177 in_ out2
 >     let expect' = V.fromList [0x0, 0xb1, 0x7f, 0xce, 0xfe, 0x4f, 0x81, 0x9e, 0x3, 0x6, 0xe8, 0x75, 0xbd, 0x40, 0x36, 0xa3, 0x95, 0xcb]
 >     out'' :: SV.Vector Word8 <- V.freeze out
->     out2'' :: SV.Vector Word8 <- V.freeze out
+>     out2'' :: SV.Vector Word8 <- V.freeze out2
 >     out'' @?= expect'
 >     out2'' @?= expect'
 >
