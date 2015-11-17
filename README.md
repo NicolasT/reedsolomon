@@ -12,6 +12,24 @@ For an introduction on erasure coding, see the post on the [Backblaze blog](http
 
 Package home: https://github.com/NicolasT/reedsolomon
 
+# Performance
+Performance depends mainly on the number of parity shards. In rough terms, doubling the number of parity shards will double the encoding time.
+
+Here are the throughput numbers with some different selections of data and parity shards. For reference each shard is 1MB random data, and 1 CPU core is used for encoding.
+
+| Data | Parity | Parity | SSSE3 MB/s  |
+|------|--------|--------|-------------|
+| 5    | 2      | 40%    | 3641,66     |
+| 10   | 2      | 20%    | 3951,01     |
+| 10   | 4      | 40%    | 1821,16     |
+| 50   | 20     | 40%    |  398,09     |
+
+Example of performance on Intel(R) Core(TM) i7-4600U CPU @ 3.30GHz - 2 physical cores, 4 logical cores (note: `/proc/cpuinfo` mentions 2.10GHz only). The example uses 10 blocks with 16MB data each and 4 parity blocks.
+
+| Threads | MB/s    | Speed |
+|---------|---------|-------|
+| 1       | 1551,89 | 100%  |
+
 # Links
 * [Backblaze Open Sources Reed-Solomon Erasure Coding Source Code](https://www.backblaze.com/blog/reed-solomon/).
 * [GolangReedSolomon](https://github.com/klauspost/reedsolomon). Compatible Go library by Klaus Post.
