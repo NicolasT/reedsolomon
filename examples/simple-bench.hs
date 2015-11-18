@@ -1,6 +1,13 @@
+{-# LANGUAGE CPP #-}
 module Main (main) where
 
+import Prelude hiding (sum)
+
+#if !MIN_VERSION_base(4, 8, 0)
+import Control.Applicative ((<$>))
+#endif
 import Control.Monad (when)
+import Data.Foldable (sum)
 import Data.Maybe (fromJust)
 
 import System.Environment (getArgs, getProgName)

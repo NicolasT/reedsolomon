@@ -71,7 +71,7 @@ func galMulSlice(c byte, in, out []byte) {
 	}
 }
 
-> galMulSlice :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
+> galMulSlice :: (Functor m, PrimMonad m) => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSlice c in_ out = do
 >     let mtlc = S.index GenTables.mulTableLow c
 >         mthc = S.index GenTables.mulTableHigh c
@@ -100,7 +100,7 @@ func galMulSliceXor(c byte, in, out []byte) {
 	}
 }
 
-> galMulSliceXor :: PrimMonad m => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
+> galMulSliceXor :: (Functor m, PrimMonad m) => Word8 -> V.Vector Word8 -> V.MVector (PrimState m) Word8 -> m ()
 > galMulSliceXor c in_ out = do
 >     let mtlc = S.index GenTables.mulTableLow c
 >         mthc = S.index GenTables.mulTableHigh c

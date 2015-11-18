@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -35,6 +37,9 @@ import Prelude hiding (Bounded, length)
 import qualified Prelude
 
 import Data.Maybe (fromMaybe)
+#if !MIN_VERSION_base(4, 8, 0)
+import Data.Monoid (mconcat)
+#endif
 import Data.Proxy
 import Data.Typeable
 import Data.Word
@@ -153,6 +158,6 @@ generate = Vector . V.generate (fromInteger $ natVal (Proxy :: Proxy n))
 -- | Execute the monadic action to fill a new sized 'Vector'.
 --
 -- O(n).
-replicateM :: forall m n v a. (Monad m, V.Vector v a, KnownNat n) => m a -> m (Vector v n a)
+replicateM :: forall m n v a. (Functor m, Monad m, V.Vector v a, KnownNat n) => m a -> m (Vector v n a)
 replicateM = fmap Vector . V.replicateM (fromInteger $ natVal (Proxy :: Proxy n))
 {-# INLINE replicateM #-}

@@ -1,7 +1,11 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Main (main) where
 
+#if !MIN_VERSION_base(4, 8, 0)
+import Data.Monoid (mempty)
+#endif
 import Data.Word (Word8)
 import Text.Printf (printf)
 

@@ -1,5 +1,9 @@
 > {-# LANGUAGE CPP #-}
+> {-# LANGUAGE DeriveDataTypeable #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
+#if __GLASGOW_HASKELL__ == 708
+> {-# OPTIONS_GHC -fno-warn-amp #-}
+#endif
 > {-# OPTIONS_HADDOCK show-extensions #-}
 >
 > -- |
@@ -31,9 +35,12 @@
 >     , ValueError(..)
 >     ) where
 >
+> import Prelude hiding (any)
+>
 > import Control.Exception.Base (Exception)
 > import Control.Monad.ST (ST, runST)
 > import Control.Monad.Trans (lift)
+> import Data.Foldable (any)
 > import Data.Maybe (fromJust, fromMaybe)
 > import Data.Typeable (Typeable)
 > import Data.Word
