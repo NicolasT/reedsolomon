@@ -46,7 +46,7 @@ Library
   Default-Language:    Haskell2010
   Ghc-Options:         -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
-  Cc-Options:          -O3 -funroll-all-loops -ggdb3 -Wall -Wextra
+  Cc-Options:          -std=c1x -O3 -funroll-all-loops -ggdb3 -Wall -Wextra
 
   if flag(SIMD)
     CPP-Options:       -DSIMD
