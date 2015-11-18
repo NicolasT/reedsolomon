@@ -252,14 +252,14 @@ GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS)
                 access(s, F_OK);        \
         } while(0)
 
-#define IFUNC(n)                                                                \
-        typeof(n) * n ## _ifunc(void) {                                         \
+#define IFUNC(n, proto)                                                         \
+        proto n ## _ifunc(void) {                                               \
                 unsigned int eax = 0,                                           \
                              ebx = 0,                                           \
                              ecx = 0,                                           \
                              edx = 0;                                           \
                 int rc = 0;                                                     \
-                typeof(n) *func = NULL;                                         \
+                proto func = NULL;                                         \
                                                                                 \
                 rc = __get_cpuid(1, &eax, &ebx, &ecx, &edx);                    \
                 if(rc == 0) {                                                   \
@@ -284,5 +284,8 @@ GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS)
                 return func;                                                    \
         }
 
-IFUNC(reedsolomon_gal_mul)
-IFUNC(reedsolomon_gal_mul_xor)
+typedef GAL_MUL_PROTO_RETURN(*gal_mul_proto)(GAL_MUL_PROTO_ARGS);
+typedef GAL_MUL_XOR_PROTO_RETURN(*gal_mul_xor_proto)(GAL_MUL_XOR_PROTO_ARGS);
+
+IFUNC(reedsolomon_gal_mul, gal_mul_proto)
+IFUNC(reedsolomon_gal_mul_xor, gal_mul_xor_proto)
