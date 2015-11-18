@@ -6,7 +6,16 @@ machine:
     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 10
     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
 
+dependencies:
+  pre:
+    - sudo apt-get update
+    - sudo apt-get install hscolour
+
 test:
   override:
     - cabal build
     - cabal test --show-details=always --test-options="+RTS -N2"
+
+  post:
+    - cabal haddock --hyperlink-source
+    - mv dist/doc/html/reedsolomon/* $CIRCLE_ARTIFACTS/
