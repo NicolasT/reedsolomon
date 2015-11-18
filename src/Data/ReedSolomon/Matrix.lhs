@@ -1,3 +1,4 @@
+> {-# LANGUAGE DeriveDataTypeable #-}
 > module Data.ReedSolomon.Matrix (
 >       Matrix
 >     , identityMatrix

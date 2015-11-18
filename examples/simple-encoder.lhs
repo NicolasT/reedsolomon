@@ -1,7 +1,11 @@
+> {-# LANGUAGE CPP #-}
 > module Main (main) where
 >
 > import Control.Monad (forM_, when)
 > import Data.Maybe (fromMaybe)
+#if !MIN_VERSION_base(4, 8, 0)
+> import Data.Monoid (mempty)
+#endif
 > import Text.Printf (printf)
 >
 > import System.FilePath (joinPath, takeDirectory, takeFileName)

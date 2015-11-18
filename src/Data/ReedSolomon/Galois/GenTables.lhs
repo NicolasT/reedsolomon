@@ -1,3 +1,4 @@
+> {-# LANGUAGE CPP #-}
 > {-# LANGUAGE DataKinds #-}
 > {-# LANGUAGE FlexibleContexts #-}
 > {-# LANGUAGE OverloadedLists #-}
@@ -13,6 +14,9 @@
 >
 > import Prelude hiding (log)
 >
+#if !MIN_VERSION_base(4, 8, 0)
+> import Control.Applicative ((<$>), (<*>))
+#endif
 > import Control.Monad (when)
 > import Control.Monad.ST (runST)
 > import Data.Bits ((.&.), shiftR)
