@@ -1,3 +1,4 @@
+> {-# LANGUAGE CPP #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
 > {-# OPTIONS_HADDOCK show-extensions #-}
 >
@@ -48,7 +49,11 @@
 >
 > import Data.ReedSolomon.Matrix (Matrix)
 > import qualified Data.ReedSolomon.Matrix as Matrix
+#ifdef SIMD
 > import Data.ReedSolomon.Galois.Amd64 (galMulSlice, galMulSliceXor)
+#else
+> import Data.ReedSolomon.Galois.NoAsm (galMulSlice, galMulSliceXor)
+#endif
 > import qualified Data.Vector.Generic.Compat as VC
 > import qualified Data.Vector.Generic.Exceptions as VE
 > import qualified Data.Vector.Generic.Lifted as VL
