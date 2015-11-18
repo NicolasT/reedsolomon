@@ -15,6 +15,7 @@ test:
   override:
     - cabal build
     - cabal test --show-details=always --test-options="+RTS -N2"
+    - cabal test --show-details=always --test-options="--xml $CIRCLE_TEST_REPORTS/junit.xml +RTS -N2"
 
   post:
     - cabal haddock --hyperlink-source

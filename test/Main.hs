@@ -1,6 +1,7 @@
 module Main (main) where
 
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, defaultIngredients, defaultMainWithIngredients, testGroup)
+import Test.Tasty.Runners.AntXML (antXMLRunner)
 
 import qualified Galois
 import qualified Matrix
@@ -15,4 +16,6 @@ tests = testGroup "Tests" [ Galois.tests
                           ]
 
 main :: IO ()
-main = defaultMain tests
+main = defaultMainWithIngredients ingredients tests
+  where
+    ingredients = antXMLRunner : defaultIngredients
