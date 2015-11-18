@@ -1,0 +1,12 @@
+machine:
+  ghc:
+    version: 7.10.2
+
+  pre:
+    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 10
+    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
+
+test:
+  override:
+    - cabal build
+    - cabal test --show-details=always --test-options="+RTS -N2"
