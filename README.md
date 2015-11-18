@@ -1,8 +1,11 @@
 # Reed-Solomon
-[![Build Status][3]][4]
+[![Travis CI][3]][4]
+[![Circle CI][5]][6]
 
 [3]: https://travis-ci.org/NicolasT/reedsolomon.svg?branch=master
 [4]: https://travis-ci.org/NicolasT/reedsolomon
+[5]: https://circleci.com/gh/NicolasT/reedsolomon/tree/master.svg?style=svg
+[6]: https://circleci.com/gh/NicolasT/reedsolomon/tree/master
 
 Reed-Solomon Erasure Coding in Haskell, with speeds exceeding 1GB/s/cpu core implemented in pure Haskell (and some SIMD C/assembler).
 
