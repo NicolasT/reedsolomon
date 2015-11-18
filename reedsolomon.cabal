@@ -18,12 +18,16 @@ Extra-Source-Files:  README.md
                    , stack.yaml
 Cabal-Version:       >=1.10
 
+Flag SIMD
+  Description:  Enable SIMD/AVX Galois field calculation routines
+  Default:      True
+  Manual:       True
+
 Library
   Hs-Source-Dirs:      src
   Exposed-Modules:     Data.ReedSolomon
                      , Data.Vector.Storable.ByteString
   Other-Modules:       Data.ReedSolomon.Galois
-                     , Data.ReedSolomon.Galois.Amd64
                      , Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Galois.NoAsm
                      , Data.ReedSolomon.Matrix
@@ -31,7 +35,6 @@ Library
                      , Data.Vector.Generic.Exceptions
                      , Data.Vector.Generic.Lifted
                      , Data.Vector.Generic.Sized
-  C-Sources:           cbits/galois_amd64.c
   Build-Depends:       base >= 4.8 && < 4.9
                      , vector >= 0.10 && < 0.11
                      , loop >= 0.2 && < 0.3
@@ -44,6 +47,11 @@ Library
   Ghc-Options:         -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
   Cc-Options:          -O3 -funroll-all-loops -ggdb3 -Wall -Wextra
+
+  if flag(SIMD)
+    CPP-Options:       -DSIMD
+    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    C-Sources:         cbits/galois_amd64.c
 
 Executable reedsolomon-simple-encoder
   Hs-Source-Dirs:      examples
@@ -107,7 +115,6 @@ Test-Suite reedsolomon-test
                      , Vector
                      , Data.ReedSolomon
                      , Data.ReedSolomon.Galois
-                     , Data.ReedSolomon.Galois.Amd64
                      , Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Galois.NoAsm
                      , Data.ReedSolomon.Matrix
@@ -134,13 +141,16 @@ Test-Suite reedsolomon-test
   Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
 
+  if flag(SIMD)
+    CPP-Options:       -DSIMD
+    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+
 Benchmark reedsolomon-bench
   Type:                exitcode-stdio-1.0
   Hs-Source-Dirs:      bench
                      , src
   Main-Is:             Main.hs
-  Other-Modules:       Data.ReedSolomon.Galois.Amd64
-                     , Data.ReedSolomon.Galois.GenTables
+  Other-Modules:       Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Galois.NoAsm
                      , Data.Vector.Generic.Sized
   Build-Depends:       base
@@ -152,6 +162,10 @@ Benchmark reedsolomon-bench
   Default-Language:    Haskell2010
   Ghc-Options:         -rtsopts -Wall -O2 -fllvm -g
   Ghc-Prof-Options:    -fprof-auto
+
+  if flag(SIMD)
+    CPP-Options:       -DSIMD
+    Other-Modules:     Data.ReedSolomon.Galois.Amd64
 
 Source-Repository head
   Type:     git

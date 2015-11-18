@@ -31,4 +31,8 @@ install:
   - ./.travis_long stack --no-terminal --skip-ghc-check build --ghc-options "-pgmc gcc-5 -pgmlo opt-3.5 -pgmlc llc-3.5" --test --bench --only-snapshot
 
 script:
+  - echo "Running tests with SIMD support disabled"
+  - stack --no-terminal --skip-ghc-check build --flag=reedsolomon:-SIMD --pedantic --ghc-options "-pgmc gcc-5 -pgmlo opt-3.5 -pgmlc llc-3.5" --test --test-arguments "+RTS -N2" --bench --no-run-benchmarks
+  - stack clean
+  - echo "Running tests with default settings (SIMD support enabled)"
   - stack --no-terminal --skip-ghc-check build --pedantic --ghc-options "-pgmc gcc-5 -pgmlo opt-3.5 -pgmlc llc-3.5" --test --test-arguments "+RTS -N2" --bench --no-run-benchmarks
