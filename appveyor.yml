@@ -1,0 +1,21 @@
+clone_folder: "c:\\reedsolomon"
+
+environment:
+  global:
+    STACK_ROOT: "c:\\stack"
+
+cache:
+  - "c:\\stack"
+  - '%USERPROFILE%\AppData\Local\Programs\stack'
+
+install:
+  - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
+  - 7z x stack.zip stack.exe
+  - stack setup > nul
+  - stack build --test --bench --only-snapshot --flag=reedsolomon:-SIMD --flag=reedsolomon:-LLVM
+
+build_script:
+  - stack build --pedantic --test --no-run-tests --bench --no-run-benchmarks --flag=reedsolomon:-SIMD --flag=reedsolomon:-LLVM
+
+test_script:
+  - stack build --pedantic --test --test-arguments "+RTS -N1" --flag=reedsolomon:-SIMD --flag=reedsolomon:-LLVM
