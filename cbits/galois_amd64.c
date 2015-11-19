@@ -210,6 +210,13 @@ __attribute__((hot)) GAL_MUL_XOR_PROTO(avx, avx_opt) {
 #undef STORE_V
 
 
+/* We only support the AVX version for now on Windows.
+ * Rationale: MinGHC comes with GCC 4.5.2, which is... rather old.
+ * Instead of turning the code below into a conditional-compilation-mess, keep
+ * things easy (well, easier) by only providing one version.
+ */
+#ifndef _WIN32
+
 /* Compiler-generated implementations for various targets */
 typedef uint8_t v16uc __attribute__((vector_size(16)));
 
@@ -289,3 +296,30 @@ typedef GAL_MUL_XOR_PROTO_RETURN(*gal_mul_xor_proto)(GAL_MUL_XOR_PROTO_ARGS);
 
 IFUNC(reedsolomon_gal_mul, gal_mul_proto)
 IFUNC(reedsolomon_gal_mul_xor, gal_mul_xor_proto)
+#else /* ifndef _WIN32 */
+GAL_MUL_PROTO_RETURN reedsolomon_gal_mul(GAL_MUL_PROTO_ARGS) {
+        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
+}
+GAL_MUL_PROTO_RETURN reedsolomon_gal_mul_avx(GAL_MUL_PROTO_ARGS) {
+        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
+}
+GAL_MUL_PROTO_RETURN reedsolomon_gal_mul_sse_4_1(GAL_MUL_PROTO_ARGS) {
+        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
+}
+GAL_MUL_PROTO_RETURN reedsolomon_gal_mul_generic(GAL_MUL_PROTO_ARGS) {
+        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
+}
+
+GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS) {
+        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
+}
+GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor_avx(GAL_MUL_XOR_PROTO_ARGS) {
+        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
+}
+GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor_sse_4_1(GAL_MUL_XOR_PROTO_ARGS) {
+        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
+}
+GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor_generic(GAL_MUL_XOR_PROTO_ARGS) {
+        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
+}
+#endif

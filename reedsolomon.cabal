@@ -55,7 +55,9 @@ Library
   if flag(LLVM)
     Ghc-Options:       -fllvm
   Ghc-Prof-Options:    -fprof-auto
-  Cc-Options:          -std=c1x -O3 -funroll-all-loops -ggdb3 -Wall -Wextra
+  Cc-Options:          -std=c99 -O3 -funroll-all-loops -ggdb3 -Wall -Wextra
+  if os(windows)
+    Cc-Options:        -mavx -mssse3
 
   if flag(SIMD)
     CPP-Options:       -DSIMD
