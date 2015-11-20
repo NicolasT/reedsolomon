@@ -1,4 +1,4 @@
-language: haskell
+language: C
 
 matrix:
   include:
@@ -8,6 +8,8 @@ matrix:
     - env: RESOLVER=lts-2 LLVM=3.4
     # Current nightly uses GHC 7.10.x
     - env: RESOLVER=nightly LLVM=3.5
+    - env: RESOLVER=lts-3
+      os: osx
 
 sudo: false
 cache:
@@ -16,7 +18,18 @@ cache:
 
 before_install:
   - mkdir -p ~/.local/bin/
-  - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  - case "$TRAVIS_OS_NAME" in
+      linux)
+        travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack';
+        export GHC_OPTIONS="-pgmc gcc-5 -pgmlo opt-$LLVM -pgmlc llc-$LLVM";
+        export LLVM_FLAG=LLVM;
+        export SIMD_SSE_FLAG=-SIMD-SSE;;
+      osx)
+        travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --strip-components=1 -C ~/.local/bin '*/stack';
+        export GHC_OPTIONS="";
+        export LLVM_FLAG=-LLVM;
+        export SIMD_SSE_FLAG=SIMD-SSE;;
+    esac
   - export PATH=~/.local/bin:$PATH
 
 addons:
@@ -25,6 +38,7 @@ addons:
       - llvm-toolchain-precise-3.5
       - ubuntu-toolchain-r-test
     packages:
+      - libgmp-dev
       - llvm-3.4
       - llvm-3.5
       - llvm-3.4-runtime
@@ -35,14 +49,14 @@ addons:
 
 install:
   - ./.travis_long stack --no-terminal setup --resolver=$RESOLVER
-  - ./.travis_long stack --no-terminal build --ghc-options "-pgmc gcc-5 -pgmlo opt-$LLVM -pgmlc llc-$LLVM" --test --bench --only-snapshot --resolver=$RESOLVER
+  - ./.travis_long stack --no-terminal build --ghc-options "$GHC_OPTIONS" --test --bench --only-snapshot --resolver=$RESOLVER
 
 script:
   - echo "Running tests with SIMD support disabled"
-  - stack --no-terminal build --flag=reedsolomon:-SIMD --pedantic --ghc-options "-pgmc gcc-5 -pgmlo opt-$LLVM -pgmlc llc-$LLVM" --test --test-arguments "+RTS -N2" --bench --no-run-benchmarks --resolver=$RESOLVER
+  - stack --no-terminal build --flag=reedsolomon:-SIMD --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --no-run-benchmarks --resolver=$RESOLVER
   - stack --resolver=$RESOLVER clean
   - echo "Running tests with default settings (SIMD support enabled)"
-  - stack --no-terminal build --pedantic --ghc-options "-pgmc gcc-5 -pgmlo opt-$LLVM -pgmlc llc-$LLVM" --test --test-arguments "+RTS -N2" --bench --resolver=$RESOLVER
+  - stack --no-terminal build --flag=reedsolomon:$SIMD_SSE_FLAG --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --resolver=$RESOLVER
 
   - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 5 2 $(( 5 * 1024 * 1024 ))
   - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 10 2 $(( 10 * 1024 * 1024 ))
