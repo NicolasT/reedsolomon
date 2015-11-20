@@ -40,6 +40,7 @@ Flag LLVM
 Library
   Hs-Source-Dirs:      src
   Exposed-Modules:     Data.ReedSolomon
+                     , Data.ReedSolomon.BuildInfo
                      , Data.Vector.Storable.ByteString
   Other-Modules:       Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.GenTables
@@ -57,6 +58,7 @@ Library
                      , exceptions >= 0.8 && < 0.9
                      , bytestring >= 0.10 && < 0.11
                      , profunctors >= 4.4 && < 5.2
+                     , gitrev >= 1.0 && < 1.2
   Default-Language:    Haskell2010
   Ghc-Options:         -Wall -O2
   if impl(ghc >= 7.10)
@@ -80,6 +82,13 @@ Library
     CPP-Options:       -DSIMD
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
     C-Sources:         cbits/galois_amd64.c
+
+  if flag(SIMD)
+    Cpp-Options:       -DSIMD
+  if flag(SIMD-SSE)
+    Cpp-Options:       -DSIMD_SSE
+  if flag(LLVM)
+    Cpp-Options:       -DLLVM
 
 Executable reedsolomon-simple-encoder
   Hs-Source-Dirs:      examples
