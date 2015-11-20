@@ -54,15 +54,22 @@ done_xor:
 
 #define GAL_MUL_XOR_PROTO_RETURN size_t
 #define GAL_MUL_XOR_PROTO_ARGS                  \
-        const uint8_t const _low[16],           \
-        const uint8_t const _high[16],          \
+        const uint8_t _low[16],                 \
+        const uint8_t _high[16],                \
         const uint8_t *restrict const _in,      \
         uint8_t *restrict const _out,           \
-        const size_t const len                  \
+        const size_t len                        \
 
-#define GAL_MUL_XOR_PROTO(tgt, name)                            \
-        GAL_MUL_XOR_PROTO_RETURN                                \
-        __attribute__((target(#tgt) nonnull))                   \
+#if defined(__GNUC__) && !defined(__clang__)
+# define TARGET(tgt) __attribute__((target(tgt)))
+#else
+# define TARGET(tgt)
+#endif
+
+#define GAL_MUL_XOR_PROTO(tgt, name)                                    \
+        GAL_MUL_XOR_PROTO_RETURN                                        \
+        TARGET(#tgt)                                                    \
+        __attribute__((nonnull))                                        \
         reedsolomon_gal_mul_xor_ ##name (GAL_MUL_XOR_PROTO_ARGS)
 
 #define GAL_MUL_XOR_IMPL                                                \
@@ -141,15 +148,16 @@ done:
 
 #define GAL_MUL_PROTO_RETURN size_t
 #define GAL_MUL_PROTO_ARGS                      \
-        const uint8_t const _low[16],           \
-        const uint8_t const _high[16],          \
+        const uint8_t _low[16],                 \
+        const uint8_t _high[16],                \
         const uint8_t *restrict const _in,      \
         uint8_t *restrict const _out,           \
-        const size_t const len
+        const size_t len
 
-#define GAL_MUL_PROTO(tgt, name)                        \
-        GAL_MUL_PROTO_RETURN                            \
-        __attribute__((target(#tgt) nonnull))           \
+#define GAL_MUL_PROTO(tgt, name)                                \
+        GAL_MUL_PROTO_RETURN                                    \
+        TARGET(#tgt)                                            \
+        __attribute__((nonnull))                                \
         reedsolomon_gal_mul_ ##name (GAL_MUL_PROTO_ARGS)
 
 #define GAL_MUL_IMPL                                                    \
@@ -215,7 +223,7 @@ __attribute__((hot)) GAL_MUL_XOR_PROTO(avx, avx_opt) {
  * Instead of turning the code below into a conditional-compilation-mess, keep
  * things easy (well, easier) by only providing one version.
  */
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__clang__)
 
 /* Compiler-generated implementations for various targets */
 typedef uint8_t v16uc __attribute__((vector_size(16)));
@@ -296,7 +304,7 @@ typedef GAL_MUL_XOR_PROTO_RETURN(*gal_mul_xor_proto)(GAL_MUL_XOR_PROTO_ARGS);
 
 IFUNC(reedsolomon_gal_mul, gal_mul_proto)
 IFUNC(reedsolomon_gal_mul_xor, gal_mul_xor_proto)
-#else /* ifndef _WIN32 */
+#else /* if !defined(_WIN32) && !defined(__clang__) */
 GAL_MUL_PROTO_RETURN reedsolomon_gal_mul(GAL_MUL_PROTO_ARGS) {
         return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
 }
