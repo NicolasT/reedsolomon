@@ -70,6 +70,11 @@ Library
       Cc-Options:      -msse4
     else
       Cc-Options:      -mavx -mssse3
+  if os(linux)
+      Cc-Options:      -frecord-gcc-switches -grecord-gcc-switches
+  if os(osx)
+      Cc-Options:      -grecord-gcc-switches
+  -- Windows GCC doesn't support either right now
 
   if flag(SIMD)
     CPP-Options:       -DSIMD
