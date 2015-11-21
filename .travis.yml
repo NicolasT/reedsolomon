@@ -1,5 +1,10 @@
 language: C
 
+branches:
+  except:
+    - /^appveyor-.*$/
+    - /^circleci-.*$/
+
 matrix:
   include:
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
