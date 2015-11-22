@@ -1,3 +1,8 @@
+branches:
+  except:
+    - /^travisci-.*$/
+    - /^circleci-.*$/
+
 clone_folder: "c:\\reedsolomon"
 
 environment:
