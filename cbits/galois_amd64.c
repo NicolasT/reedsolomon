@@ -6,6 +6,12 @@
 #include <x86intrin.h>
 #include <cpuid.h>
 
+#if defined(__GNUC__) && !defined(__clang__)
+# define TARGET(tgt) __attribute__((target(tgt)))
+#else
+# define TARGET(tgt)
+#endif
+
 //+build !noasm !appengine
 
 // Copyright 2015, Klaus Post, see LICENSE for details.
@@ -52,27 +58,20 @@ done_xor:
     RET
 */
 
-#define GAL_MUL_XOR_PROTO_RETURN size_t
-#define GAL_MUL_XOR_PROTO_ARGS                  \
+#define PROTO_RETURN size_t
+#define PROTO_ARGS                              \
         const uint8_t _low[16],                 \
         const uint8_t _high[16],                \
         const uint8_t *restrict const _in,      \
         uint8_t *restrict const _out,           \
-        const size_t len                        \
+        const size_t len
+#define PROTO(target, name) \
+        PROTO_RETURN \
+        TARGET(#target) \
+        __attribute__((nonnull)) \
+        name (PROTO_ARGS)
 
-#if defined(__GNUC__) && !defined(__clang__)
-# define TARGET(tgt) __attribute__((target(tgt)))
-#else
-# define TARGET(tgt)
-#endif
-
-#define GAL_MUL_XOR_PROTO(tgt, name)                                    \
-        GAL_MUL_XOR_PROTO_RETURN                                        \
-        TARGET(#tgt)                                                    \
-        __attribute__((nonnull))                                        \
-        reedsolomon_gal_mul_xor_ ##name (GAL_MUL_XOR_PROTO_ARGS)
-
-#define GAL_MUL_XOR_IMPL                                                \
+#define TEMPLATE                                                        \
         const V * const low = (const V *)_low,                          \
                 * const high = (const V *)_high,                        \
                 * in = (const V *)_in;                                  \
@@ -86,8 +85,7 @@ done_xor:
           low_input = { 0 },                                            \
           mul_low_part = { 0 },                                         \
           mul_high_part = { 0 },                                        \
-          result = { 0 },                                               \
-          out_x = { 0 };                                                \
+          result = { 0 };                                               \
         size_t x = len / 16;                                            \
                                                                         \
         while(x > 0) {                                                  \
@@ -98,8 +96,7 @@ done_xor:
                 mul_low_part = SHUFFLE_V(low_vector, low_input);        \
                 mul_high_part = SHUFFLE_V(high_vector, high_input);     \
                 result = XOR_V(mul_low_part, mul_high_part);            \
-                out_x = LOAD_V(out);                                    \
-                result = XOR_V(out_x, result);                          \
+                result = POSTPROCESS(LOAD_V(out), result);              \
                 STORE_V(out, result);                                   \
                 in++;                                                   \
                 out++;                                                  \
@@ -146,53 +143,6 @@ done:
 
 */
 
-#define GAL_MUL_PROTO_RETURN size_t
-#define GAL_MUL_PROTO_ARGS                      \
-        const uint8_t _low[16],                 \
-        const uint8_t _high[16],                \
-        const uint8_t *restrict const _in,      \
-        uint8_t *restrict const _out,           \
-        const size_t len
-
-#define GAL_MUL_PROTO(tgt, name)                                \
-        GAL_MUL_PROTO_RETURN                                    \
-        TARGET(#tgt)                                            \
-        __attribute__((nonnull))                                \
-        reedsolomon_gal_mul_ ##name (GAL_MUL_PROTO_ARGS)
-
-#define GAL_MUL_IMPL                                                    \
-        const V * const low = (const V *)_low,                          \
-                * const high = (const V *)_high,                        \
-                * in = (const V *)_in;                                  \
-        V *out = (V *)_out;                                             \
-                                                                        \
-        const V low_mask_unpacked = LOW_MASK_UNPACKED,                  \
-                low_vector = LOAD_V(low),                               \
-                high_vector = LOAD_V(high);                             \
-        V in_x = { 0 },                                                 \
-          high_input = { 0 },                                           \
-          low_input = { 0 },                                            \
-          mul_low_part = { 0 },                                         \
-          mul_high_part = { 0 },                                        \
-          result = { 0 };                                               \
-        size_t x = len / 16;                                            \
-                                                                        \
-        while(x > 0) {                                                  \
-                in_x = LOAD_V(in);                                      \
-                high_input = SHIFT_RIGHT_V(in_x, 4);                    \
-                low_input = AND_V(in_x, low_mask_unpacked);             \
-                high_input = AND_V(high_input, low_mask_unpacked);      \
-                mul_low_part = SHUFFLE_V(low_vector, low_input);        \
-                mul_high_part = SHUFFLE_V(high_vector, high_input);     \
-                result = XOR_V(mul_low_part, mul_high_part);            \
-                STORE_V(out, result);                                   \
-                in++;                                                   \
-                out++;                                                  \
-                x--;                                                    \
-        }                                                               \
-                                                                        \
-        return ((const uint8_t *)in - _in);                             \
-
 /* Hand-rolled AVX-based implementations */
 #define V                       __m128i
 #define LOAD_V(a)               _mm_loadu_si128(a)
@@ -202,11 +152,15 @@ done:
 #define SHUFFLE_V(v, o)         _mm_shuffle_epi8(v, o)
 #define XOR_V(a, b)             _mm_xor_si128(a, b)
 #define STORE_V(l, v)           _mm_store_si128(l, v)
-__attribute__((hot)) GAL_MUL_PROTO(avx, avx_opt) {
-        GAL_MUL_IMPL
+__attribute__((hot)) PROTO(avx, reedsolomon_gal_mul_avx_opt) {
+#define POSTPROCESS(old, result)        result
+        TEMPLATE
+#undef POSTPROCESS
 }
-__attribute__((hot)) GAL_MUL_XOR_PROTO(avx, avx_opt) {
-        GAL_MUL_XOR_IMPL
+__attribute__((hot)) PROTO(avx, reedsolomon_gal_mul_xor_avx_opt) {
+#define POSTPROCESS(old, result)        _mm_xor_si128(old, result)
+        TEMPLATE
+#undef POSTPROCESS
 }
 #undef V
 #undef LOAD_V
@@ -240,12 +194,17 @@ typedef uint8_t v16uc __attribute__((vector_size(16)));
 #define XOR_V(a, b)             (a ^ b)
 #define STORE_V(l, v)           (*l = v)
 
-GAL_MUL_PROTO(avx, avx) { GAL_MUL_IMPL }
-GAL_MUL_XOR_PROTO(avx, avx) { GAL_MUL_XOR_IMPL }
-GAL_MUL_PROTO(sse4.1, sse_4_1) { GAL_MUL_IMPL }
-GAL_MUL_XOR_PROTO(sse4.1, sse_4_1) { GAL_MUL_XOR_IMPL }
-GAL_MUL_PROTO(default, generic) { GAL_MUL_IMPL }
-GAL_MUL_XOR_PROTO(default, generic) { GAL_MUL_XOR_IMPL }
+#define POSTPROCESS(old, result)        result
+PROTO(avx, reedsolomon_gal_mul_avx) { TEMPLATE }
+PROTO(sse4.1, reedsolomon_gal_mul_sse_4_1) { TEMPLATE }
+PROTO(default, reedsolomon_gal_mul_generic) { TEMPLATE }
+#undef POSTPROCESS
+
+#define POSTPROCESS(old, result)        (old ^ result)
+PROTO(avx, reedsolomon_gal_mul_xor_avx) { TEMPLATE }
+PROTO(sse4.1, reedsolomon_gal_mul_xor_sse_4_1) { TEMPLATE }
+PROTO(default, reedsolomon_gal_mul_xor_generic) { TEMPLATE }
+#undef POSTPROCESS
 
 #undef V
 #undef LOAD_V
@@ -257,9 +216,9 @@ GAL_MUL_XOR_PROTO(default, generic) { GAL_MUL_XOR_IMPL }
 #undef STORE_V
 
 
-GAL_MUL_PROTO_RETURN reedsolomon_gal_mul(GAL_MUL_PROTO_ARGS)
+PROTO_RETURN reedsolomon_gal_mul(PROTO_ARGS)
         __attribute__((ifunc("reedsolomon_gal_mul_ifunc")));
-GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS)
+PROTO_RETURN reedsolomon_gal_mul_xor(PROTO_ARGS)
         __attribute__((ifunc("reedsolomon_gal_mul_xor_ifunc")));
 
 #define LOG(s)                          \
@@ -274,7 +233,7 @@ GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS)
                              ecx = 0,                                           \
                              edx = 0;                                           \
                 int rc = 0;                                                     \
-                proto func = NULL;                                         \
+                proto func = NULL;                                              \
                                                                                 \
                 rc = __get_cpuid(1, &eax, &ebx, &ecx, &edx);                    \
                 if(rc == 0) {                                                   \
@@ -299,35 +258,35 @@ GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS)
                 return func;                                                    \
         }
 
-typedef GAL_MUL_PROTO_RETURN(*gal_mul_proto)(GAL_MUL_PROTO_ARGS);
-typedef GAL_MUL_XOR_PROTO_RETURN(*gal_mul_xor_proto)(GAL_MUL_XOR_PROTO_ARGS);
+typedef PROTO_RETURN(*gal_mul_proto)(PROTO_ARGS);
+typedef PROTO_RETURN(*gal_mul_xor_proto)(PROTO_ARGS);
 
 IFUNC(reedsolomon_gal_mul, gal_mul_proto)
 IFUNC(reedsolomon_gal_mul_xor, gal_mul_xor_proto)
 #else /* if !defined(_WIN32) && !defined(__clang__) */
-GAL_MUL_PROTO_RETURN reedsolomon_gal_mul(GAL_MUL_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul(PROTO_ARGS) {
         return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
 }
-GAL_MUL_PROTO_RETURN reedsolomon_gal_mul_avx(GAL_MUL_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_avx(PROTO_ARGS) {
         return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
 }
-GAL_MUL_PROTO_RETURN reedsolomon_gal_mul_sse_4_1(GAL_MUL_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_sse_4_1(PROTO_ARGS) {
         return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
 }
-GAL_MUL_PROTO_RETURN reedsolomon_gal_mul_generic(GAL_MUL_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_generic(PROTO_ARGS) {
         return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
 }
 
-GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor(GAL_MUL_XOR_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_xor(PROTO_ARGS) {
         return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
 }
-GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor_avx(GAL_MUL_XOR_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_xor_avx(PROTO_ARGS) {
         return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
 }
-GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor_sse_4_1(GAL_MUL_XOR_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_xor_sse_4_1(PROTO_ARGS) {
         return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
 }
-GAL_MUL_XOR_PROTO_RETURN reedsolomon_gal_mul_xor_generic(GAL_MUL_XOR_PROTO_ARGS) {
+PROTO_RETURN reedsolomon_gal_mul_xor_generic(PROTO_ARGS) {
         return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
 }
 #endif
