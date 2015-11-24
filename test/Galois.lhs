@@ -343,8 +343,8 @@ func TestGalois(t *testing.T) {
 >
 > instance QC.Arbitrary Input where
 >     arbitrary = do
->         l <- QC.arbitrary `QC.suchThat` (>= 16)
->         let l' = 16 * (l `div` 16)
+>         l <- QC.arbitrary `QC.suchThat` (>= 32)
+>         let l' = 32 * (l `div` 32)
 >         (I . SV.fromListN l') `fmap` QC.vector l'
 >
 > reedsolomonGalMulEquivalence :: Amd64.CProto
@@ -367,6 +367,7 @@ func TestGalois(t *testing.T) {
 
 > type CProto = Amd64.CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul" c_rgm :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_avx2_opt" c_rgm_avx2_opt :: CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul_avx_opt" c_rgm_avx_opt :: CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_rgm_avx :: CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul_sse_4_1" c_rgm_sse41 :: CProto
@@ -392,7 +393,9 @@ func TestGalois(t *testing.T) {
 >                 ]
 >           , testGroup "cbits" [
 >                   testGroup "reedsolomon_gal_mul" [
->                         testProperty "native/avx_opt" $
+>                         testProperty "native/avx2_opt" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx2_opt
+>                       , testProperty "native/avx_opt" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx_opt
 >                       , testProperty "native/avx" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx

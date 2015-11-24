@@ -36,6 +36,7 @@ main = defaultMain [
 #ifdef SIMD
     , bgroup "reedsolomon_gal_mul" [
           bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
+        , bench "AVX2-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2_opt) v1048576
         , bench "AVX-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx_opt) v1048576
         , bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
         , bench "SSE4.1" $ whnf (benchRGM c_reedsolomon_gal_mul_sse_4_1) v1048576
@@ -75,6 +76,7 @@ main = defaultMain [
 #ifdef SIMD
 type CProto = Amd64.CProto
 foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_avx2_opt" c_reedsolomon_gal_mul_avx2_opt :: CProto
 foreign import ccall unsafe "reedsolomon_gal_mul_avx_opt" c_reedsolomon_gal_mul_avx_opt :: CProto
 foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_reedsolomon_gal_mul_avx :: CProto
 foreign import ccall unsafe "reedsolomon_gal_mul_sse_4_1" c_reedsolomon_gal_mul_sse_4_1 :: CProto
