@@ -10,7 +10,7 @@
 [7]: https://ci.appveyor.com/api/projects/status/wrxftgosavg0vtha/branch/master?svg=true
 [8]: https://ci.appveyor.com/project/NicolasT/reedsolomon/branch/master
 
-Reed-Solomon Erasure Coding in Haskell, with speeds exceeding 1GB/s/cpu core implemented in pure Haskell (and some SIMD C/assembler).
+Reed-Solomon Erasure Coding in Haskell, with speeds exceeding multiple GB/s/cpu core implemented in pure Haskell (and some SIMD C/assembler).
 
 This is a Haskell port of the [GolangReedSolomon](https://github.com/klauspost/reedsolomon) library released by [Klaus Post](http://klauspost.com/), wich is a port of the [JavaReedSolomon](https://github.com/Backblaze/JavaReedSolomon) library released by [Backblaze](http://backblaze.com), with some additional optimizations.
 
@@ -23,18 +23,18 @@ Performance depends mainly on the number of parity shards. In rough terms, doubl
 
 Here are the throughput numbers with some different selections of data and parity shards. For reference each shard is 1MB random data, and 1 CPU core is used for encoding.
 
-| Data | Parity | Parity | SSSE3 MB/s  |
-|------|--------|--------|-------------|
-| 5    | 2      | 40%    | 3641,66     |
-| 10   | 2      | 20%    | 3951,01     |
-| 10   | 4      | 40%    | 1821,16     |
-| 50   | 20     | 40%    |  398,09     |
+| Data | Parity | Parity | SSSE3 MB/s | AVX2 MB/s |
+|------|--------|--------|------------|-----------|
+| 5    | 2      | 40%    | 3641,66    | 3987,24   |
+| 10   | 2      | 20%    | 3951,01    | 4444,44   |
+| 10   | 4      | 40%    | 1821,16    | 1927,90   |
+| 50   | 20     | 40%    |  398,09    |  431,78   |
 
 Example of performance on Intel(R) Core(TM) i7-4600U CPU @ 3.30GHz - 2 physical cores, 4 logical cores (note: `/proc/cpuinfo` mentions 2.10GHz only). The example uses 10 blocks with 16MB data each and 4 parity blocks.
 
-| Threads | MB/s    | Speed |
-|---------|---------|-------|
-| 1       | 1551,89 | 100%  |
+| Threads | SSSE3 MB/s | AVX2 MB/s | Speed |
+|---------|------------|-----------|-------|
+| 1       | 1551,89    | 1588,88   | 100%  |
 
 # Links
 * [Backblaze Open Sources Reed-Solomon Erasure Coding Source Code](https://www.backblaze.com/blog/reed-solomon/).
