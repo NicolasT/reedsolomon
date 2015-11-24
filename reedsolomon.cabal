@@ -185,6 +185,7 @@ Test-Suite reedsolomon-test
                      , exceptions
                      , bytestring
                      , profunctors
+                     , cpu >= 0.1 && < 0.2
                      , tasty >= 0.10 && < 0.12
                      , tasty-hunit > 0.9 && < 0.10
                      , tasty-quickcheck >= 0.8 && < 0.9
@@ -216,6 +217,7 @@ Benchmark reedsolomon-bench
                      , vector
                      , loop
                      , primitive
+                     , cpu >= 0.1 && < 0.2
                      , criterion >= 1.1 && < 1.2
                      , reedsolomon
   Default-Language:    Haskell2010
