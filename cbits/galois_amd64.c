@@ -155,7 +155,7 @@ done:
 #define AND_V(a, b)             _mm_and_si128(a, b)
 #define SHUFFLE_V(v, o)         _mm_shuffle_epi8(v, o)
 #define XOR_V(a, b)             _mm_xor_si128(a, b)
-#define STORE_V(l, v)           _mm_store_si128(l, v)
+#define STORE_V(l, v)           _mm_storeu_si128(l, v)
 #define REPLICATE_V128(v)       (v)
 __attribute__((hot)) PROTO(avx, reedsolomon_gal_mul_avx_opt) {
 #define POSTPROCESS(old, result)        result
