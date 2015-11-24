@@ -5,10 +5,18 @@
 module Main (main) where
 
 import Control.Monad.ST (ST)
+#ifdef SIMD
+import Data.Bits ((.&.), shiftL)
+import Data.Maybe (catMaybes)
+#endif
 import Data.Word (Word8)
 
 #ifdef SIMD
 import Foreign.C (CSize(..))
+#endif
+
+#ifdef SIMD
+import System.Cpuid (cpuid, cpuidWithIndex)
 #endif
 
 import Criterion.Main
@@ -26,24 +34,35 @@ import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
 #endif
 
 main :: IO ()
-main = defaultMain [
-      bgroup "Galois/galMulSlice/1048576" [
-          bench "NoAsm" $ whnf (benchGalMulSlice NoAsm.galMulSlice 177) v1048576
 #ifdef SIMD
-        , bench "Native" $ whnf (benchGalMulSlice Amd64.galMulSlice 177) v1048576
+main = do
+    (_, _, ecx1, _) <- cpuid 1
+    (_, ebx7, _, _) <- cpuidWithIndex 7 0
+    let avx2 = ebx7 .&. (1 `shiftL` 5) /= 0
+        avx = ecx1 .&. (1 `shiftL` 28) /= 0
+        sse41 = ecx1 .&. (1 `shiftL` 19) /= 0
+        dependOn b c = if b then Just c else Nothing
+#else
+main =
 #endif
-        ]
+    defaultMain [
+        bgroup "Galois/galMulSlice/1048576" [
+            bench "NoAsm" $ whnf (benchGalMulSlice NoAsm.galMulSlice 177) v1048576
 #ifdef SIMD
-    , bgroup "reedsolomon_gal_mul" [
-          bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
-        , bench "AVX2-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2_opt) v1048576
-        , bench "AVX-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx_opt) v1048576
-        , bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
-        , bench "SSE4.1" $ whnf (benchRGM c_reedsolomon_gal_mul_sse_4_1) v1048576
-        , bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
-        ]
+          , bench "Native" $ whnf (benchGalMulSlice Amd64.galMulSlice 177) v1048576
 #endif
-    ]
+          ]
+#ifdef SIMD
+      , bgroup "reedsolomon_gal_mul" $ catMaybes [
+            Just $ bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
+          , dependOn avx2 $ bench "AVX2-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2_opt) v1048576
+          , dependOn avx $ bench "AVX-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx_opt) v1048576
+          , dependOn avx $ bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
+          , dependOn sse41 $ bench "SSE4.1" $ whnf (benchRGM c_reedsolomon_gal_mul_sse_4_1) v1048576
+          , Just $ bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
+          ]
+#endif
+      ]
   where
     v1048576 = V.fromListN 1048576 $ cycle [minBound .. maxBound]
     benchGalMulSlice :: (forall s. Word8 -> SV.Vector Word8 -> SV.MVector s Word8 -> ST s ())

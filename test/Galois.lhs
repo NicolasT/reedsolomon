@@ -7,10 +7,15 @@
 > import Prelude hiding (LT)
 >
 > import Control.Monad (foldM, void, when)
+#ifdef SIMD
+> import Data.Bits ((.&.), shiftL)
+> import Data.Maybe (catMaybes)
+#endif
 > import Data.Word (Word8)
 #ifdef SIMD
 > import Foreign.C (CSize(..))
 > import GHC.TypeLits (KnownNat)
+> import System.IO.Unsafe (unsafePerformIO)
 #endif
 >
 > import Control.Loop (numLoop)
@@ -18,6 +23,10 @@
 > import qualified Data.Vector.Generic as V
 > import qualified Data.Vector.Generic.Mutable as MV
 > import qualified Data.Vector.Storable as SV
+>
+#ifdef SIMD
+> import System.Cpuid (cpuid, cpuidWithIndex)
+#endif
 >
 > import Test.Tasty (TestTree, testGroup)
 > import Test.Tasty.HUnit (Assertion, (@?=), testCase)
@@ -392,19 +401,28 @@ func TestGalois(t *testing.T) {
 >                 , testProperty "galMulSliceXor" galMulSliceXorProperty
 >                 ]
 >           , testGroup "cbits" [
->                   testGroup "reedsolomon_gal_mul" [
->                         testProperty "native/avx2_opt" $
+>                   testGroup "reedsolomon_gal_mul" $ catMaybes [
+>                         dependOn avx2 $ testProperty "native/avx2_opt" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx2_opt
->                       , testProperty "native/avx_opt" $
+>                       , dependOn avx $ testProperty "native/avx_opt" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx_opt
->                       , testProperty "native/avx" $
+>                       , dependOn avx $ testProperty "native/avx" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx
->                       , testProperty "native/sse4.1" $
+>                       , dependOn sse41 $ testProperty "native/sse4.1" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse41
->                       , testProperty "native/generic" $
+>                       , Just $ testProperty "native/generic" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_generic
 >                       ]
 >                 ]
 >           ]
 #endif
 >     ]
+#ifdef SIMD
+>   where
+>     (_, _, ecx1, _) = unsafePerformIO $ cpuid 1
+>     (_, ebx7, _, _) = unsafePerformIO $ cpuidWithIndex 7 0
+>     avx2 = ebx7 .&. (1 `shiftL` 5) /= 0
+>     avx = ecx1 .&. (1 `shiftL` 28) /= 0
+>     sse41 = ecx1 .&. (1 `shiftL` 19) /= 0
+>     dependOn b c = if b then Just c else Nothing
+#endif
