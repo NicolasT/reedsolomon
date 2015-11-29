@@ -51,7 +51,6 @@ static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
 #if defined(__SSE2__)
         v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
 #else
-# warning No SSE2 support available, fallback to slower loadu emulation
         const uint64_t *in64 = (const uint64_t *)in;
         v128 result = { .u64 = { in64[0]
                                , in64[1]
@@ -78,7 +77,6 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
 #elif defined(__SSE2__)
         v result = { .m128i = _mm_set1_epi8(c) };
 #else
-# warning No AVX2 or SSE2 support available, fallback to slower set1_epi8 emulation
         uint64_t c2 = c,
                  tmp = (c2 << (7 * 8)) |
                        (c2 << (6 * 8)) |
@@ -100,7 +98,6 @@ static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned in
 #elif defined(__SSE2__)
         v result = { .m128i = _mm_srli_epi64(in.m128i, n) };
 #else
-# warning No AVX2 or SSE2 support available, fallback to slower srli_epi64 emulation
         v result = { .u64 = { in.u64[0] >> n
                             , in.u64[1] >> n
                             }
@@ -116,7 +113,6 @@ static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
 #elif defined(__SSE2__)
         v result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
 #else
-# warning no AVX2 or SSE2 support available, fallback to compiler and emulation
         v result = { .v2u64 = a.v2u64 & b.v2u64 };
 #endif
 
@@ -129,7 +125,6 @@ static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
 #elif defined(__SSE2__)
         v result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
 #else
-# warning No AVX2 or SSE2 support available, fallback to compiler xor emulation
         v result = { .v2u64 = a.v2u64 ^ b.v2u64 };
 #endif
 
@@ -142,7 +137,6 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
 #elif defined(__SSSE3__)
         v result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
 #else
-# warning No AVX2 or SSSE3 support available, fallback to slower shuffle_epi8 emulation
         v result = { .u64 = { 0, 0 } };
 
 # define DO_BYTE(i) \
@@ -163,7 +157,6 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
 #elif defined(__SSE2__)
         _mm_storeu_si128((__m128i *)out, vec.m128i);
 #else
-# warning No AVX2 or SSE2 support available, fallback to slower storeu emulation
         uint64_t *out64 = (uint64_t *)out;
 
         out64[0] = vec.u64[0];
