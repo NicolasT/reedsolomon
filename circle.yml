@@ -19,6 +19,7 @@ dependencies:
 
 test:
   override:
+    - cd cbits; autoreconf -vi
     - cabal build
     - cabal test --show-details=always --test-options="+RTS -N2"
     - cabal test --show-details=always --test-options="--xml $CIRCLE_TEST_REPORTS/junit.xml +RTS -N2"

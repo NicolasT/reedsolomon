@@ -28,12 +28,11 @@ before_install:
         travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack';
         export GHC_OPTIONS="-pgmc gcc-5 -pgmlo opt-$LLVM -pgmlc llc-$LLVM";
         export LLVM_FLAG=LLVM;
-        export SIMD_SSE_FLAG=-SIMD-SSE;;
+        export CC=gcc-5;;
       osx)
         travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --strip-components=1 -C ~/.local/bin '*/stack';
         export GHC_OPTIONS="";
-        export LLVM_FLAG=-LLVM;
-        export SIMD_SSE_FLAG=SIMD-SSE;;
+        export LLVM_FLAG=-LLVM;;
     esac
   - export PATH=~/.local/bin:$PATH
 
@@ -53,6 +52,7 @@ addons:
       - gcc-5
 
 install:
+  - pushd cbits; autoreconf -vi; popd
   - ./.travis_long stack --no-terminal setup --resolver=$RESOLVER
   - ./.travis_long stack --no-terminal build --ghc-options "$GHC_OPTIONS" --test --bench --only-snapshot --resolver=$RESOLVER
 
@@ -61,7 +61,7 @@ script:
   - stack --no-terminal build --flag=reedsolomon:-SIMD --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --no-run-benchmarks --resolver=$RESOLVER
   - stack --resolver=$RESOLVER clean
   - echo "Running tests with default settings (SIMD support enabled)"
-  - stack --no-terminal build --flag=reedsolomon:$SIMD_SSE_FLAG --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --resolver=$RESOLVER
+  - stack --no-terminal build --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --resolver=$RESOLVER
 
   - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 5 2 $(( 5 * 1024 * 1024 ))
   - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 10 2 $(( 10 * 1024 * 1024 ))

@@ -1,16 +1,184 @@
-/* Copyright 2015, Nicolas Trangez, see LICENSE for details. */
-
-#include <unistd.h>
 #include <inttypes.h>
-#include <sys/types.h>
-#include <x86intrin.h>
-#include <cpuid.h>
+#include <immintrin.h>
 
-#if defined(__GNUC__) && !defined(__clang__)
-# define TARGET(tgt) __attribute__((target(tgt)))
+#include "galois_amd64.h"
+
+#if HAVE_FUNC_ATTRIBUTE_HOT
+# define HOT_FUNCTION   __attribute__((hot))
 #else
-# define TARGET(tgt)
+# define HOT_FUNCTION
 #endif
+
+#if HAVE_FUNC_ATTRIBUTE_CONST
+# define CONST_FUNCTION __attribute__((const))
+#else
+# define CONST_FUNCTION
+#endif
+
+#if HAVE_FUNC_ATTRIBUTE_ALWAYS_INLINE
+# define ALWAYS_INLINE  inline __attribute__((always_inline))
+#else
+# define ALWAYS_INLINE  inline
+#endif
+
+#define CONCAT_HELPER(a, b)     a ## b
+#define CONCAT(a, b)            CONCAT_HELPER(a, b)
+
+typedef uint8_t v16u8v __attribute__((vector_size(16)));
+typedef uint64_t v2u64v __attribute__((vector_size(16)));
+
+#define T(t, n) t n[128 / 8 / sizeof(t)]
+#define T1(t, n) t n
+typedef union {
+        T(uint8_t, u8);
+        T(uint64_t, u64);
+#if __SSE2__
+        T1(__m128i, m128i);
+#endif
+        T1(v16u8v, v16u8);
+        T1(v2u64v, v2u64);
+} v128 __attribute__((aligned(16)));
+# undef T
+# undef T1
+
+#ifdef __AVX2__
+typedef __m256i v;
+#else
+typedef v128 v;
+#endif
+
+static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
+#if defined(__SSE2__)
+        v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
+#else
+# warning No SSE2 support available, fallback to slower loadu emulation
+        const uint64_t *in64 = (const uint64_t *)in;
+        v128 result = { .u64 = { in64[0]
+                               , in64[1]
+                               }
+                      };
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
+#if defined(__AVX2__)
+        v result = _mm256_loadu_si256((const v *)in);
+#else
+        v result = loadu_v128(in);
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
+#if defined(__AVX2__)
+        v result = _mm256_set1_epi8(c);
+#elif defined(__SSE2__)
+        v result = { .m128i = _mm_set1_epi8(c) };
+#else
+# warning No AVX2 or SSE2 support available, fallback to slower set1_epi8 emulation
+        uint64_t c2 = c,
+                 tmp = (c2 << (7 * 8)) |
+                       (c2 << (6 * 8)) |
+                       (c2 << (5 * 8)) |
+                       (c2 << (4 * 8)) |
+                       (c2 << (3 * 8)) |
+                       (c2 << (2 * 8)) |
+                       (c2 << (1 * 8)) |
+                       (c2 << (0 * 8));
+        v result = { .u64 = { tmp, tmp } };
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned int n) {
+#if defined(__AVX2__)
+        v result = _mm256_srli_epi64(in, n);
+#elif defined(__SSE2__)
+        v result = { .m128i = _mm_srli_epi64(in.m128i, n) };
+#else
+# warning No AVX2 or SSE2 support available, fallback to slower srli_epi64 emulation
+        v result = { .u64 = { in.u64[0] >> n
+                            , in.u64[1] >> n
+                            }
+                   };
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
+#if defined(__AVX2__)
+        v result = _mm256_and_si256(a, b);
+#elif defined(__SSE2__)
+        v result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
+#else
+# warning no AVX2 or SSE2 support available, fallback to compiler and emulation
+        v result = { .v2u64 = a.v2u64 & b.v2u64 };
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
+#if defined(__AVX2__)
+        v result = _mm256_xor_si256(a, b);
+#elif defined(__SSE2__)
+        v result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
+#else
+# warning No AVX2 or SSE2 support available, fallback to compiler xor emulation
+        v result = { .v2u64 = a.v2u64 ^ b.v2u64 };
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) {
+#if defined(__AVX2__)
+        v result = _mm256_shuffle_epi8(vec, mask);
+#elif defined(__SSSE3__)
+        v result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
+#else
+# warning No AVX2 or SSSE3 support available, fallback to slower shuffle_epi8 emulation
+        v result = { .u64 = { 0, 0 } };
+
+# define DO_BYTE(i) \
+        result.u8[i] = mask.u8[i] & 0x80 ? 0 : vec.u8[mask.u8[i] & 0x0F];
+
+        DO_BYTE( 0); DO_BYTE( 1); DO_BYTE( 2); DO_BYTE( 3);
+        DO_BYTE( 4); DO_BYTE( 5); DO_BYTE( 6); DO_BYTE( 7);
+        DO_BYTE( 8); DO_BYTE( 9); DO_BYTE(10); DO_BYTE(11);
+        DO_BYTE(12); DO_BYTE(13); DO_BYTE(14); DO_BYTE(15);
+#endif
+
+        return result;
+}
+
+static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
+#if defined(__AVX2__)
+        _mm256_storeu_si256((__m256i *)out, vec);
+#elif defined(__SSE2__)
+        _mm_storeu_si128((__m128i *)out, vec.m128i);
+#else
+# warning No AVX2 or SSE2 support available, fallback to slower storeu emulation
+        uint64_t *out64 = (uint64_t *)out;
+
+        out64[0] = vec.u64[0];
+        out64[1] = vec.u64[1];
+#endif
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v replicate_v128_v(const v128 vec) {
+#if defined(__AVX2__)
+        return _mm256_broadcastsi128_si256(vec.m128i);
+#else
+        return vec;
+#endif
+}
+
 
 //+build !noasm !appengine
 
@@ -58,54 +226,48 @@ done_xor:
     RET
 */
 
-#define PROTO_RETURN size_t
-#define PROTO_ARGS                              \
-        const uint8_t _low[16],                 \
-        const uint8_t _high[16],                \
-        const uint8_t *restrict const _in,      \
-        uint8_t *restrict const _out,           \
-        const size_t len
-#define PROTO(target, name) \
-        PROTO_RETURN \
-        TARGET(#target) \
-        __attribute__((nonnull)) \
-        name (PROTO_ARGS)
+#ifdef HOT
+HOT_FUNCTION
+#endif
+PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
+        const v low_mask_unpacked = set1_epi8_v(0x0f);
 
-#define TEMPLATE                                                        \
-        const V128 * const low = (const V128 *)_low,                    \
-                   * const high = (const V128 *)_high;                  \
-        const V * in = (const V *)_in;                                  \
-        V *out = (V *)_out;                                             \
-                                                                        \
-        const V low_mask_unpacked = LOW_MASK_UNPACKED;                  \
-        const V128 low_vector128 = LOAD_V128(low),                      \
-                   high_vector128 = LOAD_V128(high);                    \
-        const V low_vector = REPLICATE_V128(low_vector128),             \
-                high_vector = REPLICATE_V128(high_vector128);           \
-        V in_x = { 0 },                                                 \
-          high_input = { 0 },                                           \
-          low_input = { 0 },                                            \
-          mul_low_part = { 0 },                                         \
-          mul_high_part = { 0 },                                        \
-          result = { 0 };                                               \
-        size_t x = len / sizeof(V);                                     \
-                                                                        \
-        while(x > 0) {                                                  \
-                in_x = LOAD_V(in);                                      \
-                high_input = SHIFT_RIGHT_V(in_x, 4);                    \
-                low_input = AND_V(in_x, low_mask_unpacked);             \
-                high_input = AND_V(high_input, low_mask_unpacked);      \
-                mul_low_part = SHUFFLE_V(low_vector, low_input);        \
-                mul_high_part = SHUFFLE_V(high_vector, high_input);     \
-                result = XOR_V(mul_low_part, mul_high_part);            \
-                result = POSTPROCESS(LOAD_V(out), result);              \
-                STORE_V(out, result);                                   \
-                in++;                                                   \
-                out++;                                                  \
-                x--;                                                    \
-        }                                                               \
-                                                                        \
-        return ((const uint8_t *)in - _in);                             \
+        const v128 low_vector128 = loadu_v128(low),
+                   high_vector128 = loadu_v128(high);
+        const v low_vector = replicate_v128_v(low_vector128),
+                high_vector = replicate_v128_v(high_vector128);
+
+        const uint8_t *curr_in = in;
+        uint8_t *curr_out = out;
+
+        v in_x,
+          high_input,
+          low_input,
+          mul_low_part,
+          mul_high_part,
+          result;
+        size_t x = len / sizeof(v);
+
+        while(x > 0) {
+                in_x = loadu_v(curr_in);
+
+                low_input = and_v(in_x, low_mask_unpacked);
+                high_input = and_v(srli_epi64_v(in_x, 4), low_mask_unpacked);
+
+                mul_low_part = shuffle_epi8_v(low_vector, low_input);
+                mul_high_part = shuffle_epi8_v(high_vector, high_input);
+
+                result = xor_v(mul_low_part, mul_high_part);
+
+                storeu_v(curr_out, result);
+
+                curr_in += sizeof(v);
+                curr_out += sizeof(v);
+                x--;
+        }
+
+        return (curr_in - in);
+}
 
 /*
 // func galMulSSSE3(low, high, in, out []byte)
@@ -142,224 +304,51 @@ loopback:
     JNZ     loopback
 done:
     RET
-
 */
 
-/* Hand-rolled AVX-based implementations */
-#define V                       __m128i
-#define V128                    __m128i
-#define LOAD_V(a)               _mm_loadu_si128(a)
-#define LOAD_V128(a)            _mm_loadu_si128(a)
-#define LOW_MASK_UNPACKED       _mm_set1_epi8(0x0f)
-#define SHIFT_RIGHT_V(v, n)     _mm_srli_epi64(v, n)
-#define AND_V(a, b)             _mm_and_si128(a, b)
-#define SHUFFLE_V(v, o)         _mm_shuffle_epi8(v, o)
-#define XOR_V(a, b)             _mm_xor_si128(a, b)
-#define STORE_V(l, v)           _mm_storeu_si128(l, v)
-#define REPLICATE_V128(v)       (v)
-__attribute__((hot)) PROTO(avx, reedsolomon_gal_mul_avx_opt) {
-#define POSTPROCESS(old, result)        result
-        TEMPLATE
-#undef POSTPROCESS
-}
-__attribute__((hot)) PROTO(avx, reedsolomon_gal_mul_xor_avx_opt) {
-#define POSTPROCESS(old, result)        _mm_xor_si128(old, result)
-        TEMPLATE
-#undef POSTPROCESS
-}
-#undef V
-#undef V128
-#undef LOAD_V
-#undef LOAD_V128
-#undef LOW_MASK_UNPACKED
-#undef SHIFT_RIGHT_V
-#undef AND_V
-#undef SHUFFLE_V
-#undef XOR_V
-#undef STORE_V
-#undef REPLICATE_V128
-
-/* We only support the AVX version for now on Windows.
- * Rationale: MinGHC comes with GCC 4.5.2, which is... rather old.
- * Instead of turning the code below into a conditional-compilation-mess, keep
- * things easy (well, easier) by only providing one version.
- */
-#if !defined(_WIN32) && !defined(__clang__)
-
-/* Hand-rolled AVX2-based implementation */
-#define V                       __m256i
-#define V128                    __m128i
-#define LOAD_V(a)               _mm256_loadu_si256(a)
-#define LOAD_V128(a)            _mm_loadu_si128(a)
-#define LOW_MASK_UNPACKED       _mm256_set1_epi8(0x0f)
-#define SHIFT_RIGHT_V(v, n)     _mm256_srli_epi64(v, n)
-#define AND_V(a, b)             _mm256_and_si256(a, b)
-#define SHUFFLE_V(v, o)         _mm256_shuffle_epi8(v, o)
-#define XOR_V(a, b)             _mm256_xor_si256(a, b)
-#define STORE_V(l, v)           _mm256_storeu_si256(l, v)
-#define REPLICATE_V128(v)       _mm256_broadcastsi128_si256(v)
-__attribute__((hot)) PROTO(avx2, reedsolomon_gal_mul_avx2_opt) {
-#define POSTPROCESS(old, result)        result
-        TEMPLATE
-#undef POSTPROCESS
-}
-__attribute__((hot)) PROTO(avx2, reedsolomon_gal_mul_xor_avx2_opt) {
-#define POSTPROCESS(old, result)        _mm256_xor_si256(old, result)
-        TEMPLATE
-#undef POSTPROCESS
-}
-#undef V
-#undef V128
-#undef LOAD_V
-#undef LOAD_V128
-#undef LOW_MASK_UNPACKED
-#undef SHIFT_RIGHT_V
-#undef AND_V
-#undef SHUFFLE_V
-#undef XOR_V
-#undef STORE_V
-#undef REPLICATE_V128
-
-/* Compiler-generated implementations for various targets */
-typedef uint8_t v16uc __attribute__((vector_size(16)));
-
-#define V                       v16uc
-#define V128                    v16uc
-#define LOAD_V(a)               (*a)
-#define LOAD_V128(a)            (*a)
-#define LOW_MASK_UNPACKED       { 0x0f, 0x0f, 0x0f, 0x0f,       \
-                                  0x0f, 0x0f, 0x0f, 0x0f,       \
-                                  0x0f, 0x0f, 0x0f, 0x0f,       \
-                                  0x0f, 0x0f, 0x0f, 0x0f }
-#define SHIFT_RIGHT_V(v, n)     (v >> n)
-#define AND_V(a, b)             (a & b)
-#define SHUFFLE_V(v, o)         __builtin_shuffle(v, o)
-#define XOR_V(a, b)             (a ^ b)
-#define STORE_V(l, v)           (*l = v)
-#define REPLICATE_V128(v)       (v)
-
-#define POSTPROCESS(old, result)        result
-PROTO(avx, reedsolomon_gal_mul_avx) { TEMPLATE }
-PROTO(sse4.1, reedsolomon_gal_mul_sse_4_1) { TEMPLATE }
-PROTO(default, reedsolomon_gal_mul_generic) { TEMPLATE }
-#undef POSTPROCESS
-
-#define POSTPROCESS(old, result)        (old ^ result)
-PROTO(avx, reedsolomon_gal_mul_xor_avx) { TEMPLATE }
-PROTO(sse4.1, reedsolomon_gal_mul_xor_sse_4_1) { TEMPLATE }
-PROTO(default, reedsolomon_gal_mul_xor_generic) { TEMPLATE }
-#undef POSTPROCESS
-
-#undef V
-#undef LOAD_V
-#undef LOW_MASK_UNPACKED
-#undef SHIFT_RIGHT_V
-#undef AND_V
-#undef SHUFFLE_V
-#undef XOR_V
-#undef STORE_V
-#undef REPLICATE_V128
-
-PROTO_RETURN reedsolomon_gal_mul(PROTO_ARGS)
-        __attribute__((ifunc("reedsolomon_gal_mul_ifunc")));
-PROTO_RETURN reedsolomon_gal_mul_xor(PROTO_ARGS)
-        __attribute__((ifunc("reedsolomon_gal_mul_xor_ifunc")));
-
-#define LOG(s)                          \
-        do {                            \
-                access(s, F_OK);        \
-        } while(0)
-
-static inline __attribute__((always_inline)) int __get_cpuid_count(
-        const unsigned int level,
-        const unsigned int count,
-        unsigned int *eax,
-        unsigned int *ebx,
-        unsigned int *ecx,
-        unsigned int *edx) {
-        unsigned int ext = level & 0x80000000;
-
-        if(__get_cpuid_max(ext, 0) < level) {
-                return 0;
-        }
-
-        __cpuid_count(level, count, *eax, *ebx, *ecx, *edx);
-        return 1;
-}
-
-#define IFUNC(n, proto)                                                                                         \
-        proto n ## _ifunc(void) {                                                                               \
-                struct {                                                                                        \
-                        unsigned int eax, ebx, ecx, edx;                                                        \
-                } cpuid1 = { 0, 0, 0, 0 },                                                                      \
-                  cpuid7 = { 0, 0, 0, 0 };                                                                      \
-                int rc = 0;                                                                                     \
-                proto func = NULL;                                                                              \
-                                                                                                                \
-                rc = __get_cpuid(1, &cpuid1.eax, &cpuid1.ebx, &cpuid1.ecx, &cpuid1.edx);                        \
-                if(rc == 0) {                                                                                   \
-                        LOG("reedsolomon: cpuid failed, using " #n "_generic");                                 \
-                        func = n ## _generic;                                                                   \
-                }                                                                                               \
-                else {                                                                                          \
-                        rc = __get_cpuid_count(7, 0, &cpuid7.eax, &cpuid7.ebx, &cpuid7.ecx, &cpuid7.edx);       \
-                                                                                                                \
-                        if(rc != 0 && (cpuid7.ebx & bit_AVX2) != 0) {                                           \
-                                LOG("reedsolomon: using " #n "_avx2_opt");                                      \
-                                func = n ## _avx2_opt;                                                          \
-                        }                                                                                       \
-                        else if((cpuid1.ecx & bit_AVX) != 0) {                                                  \
-                                LOG("reedsolomon: using " #n "_avx_opt");                                       \
-                                func = n ## _avx_opt;                                                           \
-                        }                                                                                       \
-                        else if((cpuid1.ecx & bit_SSE4_1) != 0) {                                               \
-                                LOG("reedsolomon: using " #n "_sse_4_1");                                       \
-                                func = n ## _sse_4_1;                                                           \
-                        }                                                                                       \
-                        else {                                                                                  \
-                                LOG("reedsolomon: using " #n "_generic");                                       \
-                                func = n ## _generic;                                                           \
-                        }                                                                                       \
-                }                                                                                               \
-                                                                                                                \
-                return func;                                                                                    \
-        }
-
-typedef PROTO_RETURN(*gal_mul_proto)(PROTO_ARGS);
-typedef PROTO_RETURN(*gal_mul_xor_proto)(PROTO_ARGS);
-
-IFUNC(reedsolomon_gal_mul, gal_mul_proto)
-IFUNC(reedsolomon_gal_mul_xor, gal_mul_xor_proto)
-#else /* if !defined(_WIN32) && !defined(__clang__) */
-PROTO_RETURN reedsolomon_gal_mul(PROTO_ARGS) {
-        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_avx2_opt(PROTO_ARGS) {
-        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_avx(PROTO_ARGS) {
-        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_sse_4_1(PROTO_ARGS) {
-        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_generic(PROTO_ARGS) {
-        return reedsolomon_gal_mul_avx_opt(_low, _high, _in, _out, len);
-}
-
-PROTO_RETURN reedsolomon_gal_mul_xor(PROTO_ARGS) {
-        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_xor_avx2_opt(PROTO_ARGS) {
-        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_xor_avx(PROTO_ARGS) {
-        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_xor_sse_4_1(PROTO_ARGS) {
-        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
-}
-PROTO_RETURN reedsolomon_gal_mul_xor_generic(PROTO_ARGS) {
-        return reedsolomon_gal_mul_xor_avx_opt(_low, _high, _in, _out, len);
-}
+#ifdef HOT
+HOT_FUNCTION
 #endif
+PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
+        const v low_mask_unpacked = set1_epi8_v(0x0f);
+
+        const v128 low_vector128 = loadu_v128(low),
+                   high_vector128 = loadu_v128(high);
+        const v low_vector = replicate_v128_v(low_vector128),
+                high_vector = replicate_v128_v(high_vector128);
+
+        const uint8_t *curr_in = in;
+        uint8_t *curr_out = out;
+
+        v in_x,
+          high_input,
+          low_input,
+          mul_low_part,
+          mul_high_part,
+          result;
+        size_t x = len / sizeof(v);
+
+        while(x > 0) {
+                in_x = loadu_v(curr_in);
+
+                low_input = and_v(in_x, low_mask_unpacked);
+                high_input = and_v(
+                                srli_epi64_v(in_x, 4),
+                                low_mask_unpacked);
+
+                mul_low_part = shuffle_epi8_v(low_vector, low_input);
+                mul_high_part = shuffle_epi8_v(high_vector, high_input);
+
+                result = xor_v(
+                                loadu_v(curr_out),
+                                xor_v(mul_low_part, mul_high_part));
+
+                storeu_v(curr_out, result);
+
+                curr_in += sizeof(v);
+                curr_out += sizeof(v);
+                x--;
+        }
+
+        return (curr_in - in);
+}
