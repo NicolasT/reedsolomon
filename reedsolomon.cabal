@@ -3,6 +3,7 @@ Version:             0.0.0.0
 Synopsis:            Reed-Solomon Erasure Coding in Haskell
 Description:         Please see README.md
 Homepage:            http://github.com/NicolasT/reedsolomon
+Bug-Reports:         http://github.com/NicolasT/reedsolomon/issues
 License:             MIT
 License-File:        LICENSE
 Author:              Nicolas Trangez
