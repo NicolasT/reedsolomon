@@ -40,7 +40,7 @@ customPostConf innerHook args configFlags packageDescription@PackageDescription{
         Just library'@Library{..} -> packageDescription {
             library = Just library' {
                 libBuildInfo = libBuildInfo {
-                    extraLibs = filter ("galois_amd64" /=) (extraLibs libBuildInfo)
+                    extraLibs = filter ("reedsolomon" /=) (extraLibs libBuildInfo)
                 }
             }
         }

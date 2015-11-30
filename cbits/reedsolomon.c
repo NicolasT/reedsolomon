@@ -1,7 +1,7 @@
 #include <inttypes.h>
 #include <immintrin.h>
 
-#include "galois_amd64.h"
+#include "reedsolomon.h"
 
 #if HAVE_FUNC_ATTRIBUTE_HOT
 # define HOT_FUNCTION   __attribute__((hot))

@@ -26,9 +26,9 @@ Extra-Source-Files:  README.md
                    , cbits/m4/ax_gcc_func_attribute.m4
                    , cbits/m4/ax_require_defined.m4
 
-                   , cbits/galois_amd64.c
-                   , cbits/galois_amd64.h
-                   , cbits/galois_amd64_dispatch.c
+                   , cbits/reedsolomon.c
+                   , cbits/reedsolomon.h
+                   , cbits/reedsolomon_dispatch.c
 
                    , cbits/aclocal.m4
                    , cbits/ar-lib
@@ -89,7 +89,7 @@ Library
 
   if flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
-    Extra-Libraries:   galois_amd64
+    Extra-Libraries:   reedsolomon
     Cpp-Options:       -DSIMD
   if flag(LLVM)
     Ghc-Options:       -fllvm

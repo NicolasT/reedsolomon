@@ -2,7 +2,7 @@
 #include <cpuid.h>
 
 #include "config.h"
-#include "galois_amd64.h"
+#include "reedsolomon.h"
 
 #ifndef bit_AVX2
 # define bit_AVX2       (1 << 5)

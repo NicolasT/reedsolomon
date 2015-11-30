@@ -4,7 +4,7 @@
 AC_PREREQ([2.68])
 AC_INIT([reedsolomon], [0.0.0], [https://github.com/NicolasT/reedsolomon/issues])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([galois_amd64.h])
+AC_CONFIG_SRCDIR([reedsolomon.h])
 AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([1.11 foreign -Wall -Werror])

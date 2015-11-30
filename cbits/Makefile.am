@@ -1,37 +1,37 @@
 ACLOCAL_AMFLAGS = -I m4
 
-lib_LTLIBRARIES = libgalois_amd64.la
-noinst_LTLIBRARIES = libgalois_amd64_avx.la \
-		     libgalois_amd64_ssse3.la \
-		     libgalois_amd64_sse2.la \
-                     libgalois_amd64_generic.la
+lib_LTLIBRARIES = libreedsolomon.la
+noinst_LTLIBRARIES = libreedsolomon_avx.la \
+		     libreedsolomon_ssse3.la \
+		     libreedsolomon_sse2.la \
+		     libreedsolomon_generic.la
 
-libgalois_amd64_la_SOURCES = galois_amd64_dispatch.c \
-		 	     galois_amd64.h
-libgalois_amd64_la_LIBADD = $(noinst_LTLIBRARIES)
+libreedsolomon_la_SOURCES = reedsolomon_dispatch.c \
+			    reedsolomon.h
+libreedsolomon_la_LIBADD = $(noinst_LTLIBRARIES)
 
-SIMD_SRC = galois_amd64.c \
-	   galois_amd64.h
+SIMD_SRC = reedsolomon.c \
+	   reedsolomon.h
 
-libgalois_amd64_avx_la_SOURCES = $(SIMD_SRC)
-libgalois_amd64_avx_la_CPPFLAGS = -DTARGET=avx -DHOT
-libgalois_amd64_avx_la_CFLAGS = -mavx
+libreedsolomon_avx_la_SOURCES = $(SIMD_SRC)
+libreedsolomon_avx_la_CPPFLAGS = -DTARGET=avx -DHOT
+libreedsolomon_avx_la_CFLAGS = -mavx
 
-libgalois_amd64_ssse3_la_SOURCES = $(SIMD_SRC)
-libgalois_amd64_ssse3_la_CPPFLAGS = -DTARGET=ssse3
-libgalois_amd64_ssse3_la_CFLAGS = -mssse3
+libreedsolomon_ssse3_la_SOURCES = $(SIMD_SRC)
+libreedsolomon_ssse3_la_CPPFLAGS = -DTARGET=ssse3
+libreedsolomon_ssse3_la_CFLAGS = -mssse3
 
-libgalois_amd64_sse2_la_SOURCES = $(SIMD_SRC)
-libgalois_amd64_sse2_la_CPPFLAGS = -DTARGET=sse2
-libgalois_amd64_sse2_la_CFLAGS = -msse2
+libreedsolomon_sse2_la_SOURCES = $(SIMD_SRC)
+libreedsolomon_sse2_la_CPPFLAGS = -DTARGET=sse2
+libreedsolomon_sse2_la_CFLAGS = -msse2
 
-libgalois_amd64_generic_la_SOURCES = $(SIMD_SRC)
-libgalois_amd64_generic_la_CPPFLAGS = -DTARGET=generic
+libreedsolomon_generic_la_SOURCES = $(SIMD_SRC)
+libreedsolomon_generic_la_CPPFLAGS = -DTARGET=generic
 
 if RS_HAVE_AVX2
-noinst_LTLIBRARIES += libgalois_amd64_avx2.la
+noinst_LTLIBRARIES += libreedsolomon_avx2.la
 
-libgalois_amd64_avx2_la_SOURCES = $(SIMD_SRC)
-libgalois_amd64_avx2_la_CPPFLAGS = -DTARGET=avx2 -DHOT
-libgalois_amd64_avx2_la_CFLAGS = -mavx2
+libreedsolomon_avx2_la_SOURCES = $(SIMD_SRC)
+libreedsolomon_avx2_la_CPPFLAGS = -DTARGET=avx2 -DHOT
+libreedsolomon_avx2_la_CFLAGS = -mavx2
 endif
