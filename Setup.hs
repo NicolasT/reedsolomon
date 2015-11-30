@@ -57,6 +57,14 @@ buildLibrary verbosity buildDir libType = do
                     Static -> "static"
                     Shared -> "shared"
         targetDir = cbitsBuildDir </> suffix
+        configure = root </> "cbits" </> "configure"
+
+    configureExists <- doesFileExist configure
+    unless configureExists $
+        die $ concat [ "'configure' script not found. "
+                     , "If this is not a release version, you probably need "
+                     , "to run 'autoreconf -i' in the 'cbits' directory to generate it."
+                     ]
 
     createDirectoryIfMissing True targetDir
 
@@ -66,7 +74,6 @@ buildLibrary verbosity buildDir libType = do
             let libOptions = case libType of
                     Static -> ["--enable-static", "--disable-shared"]
                     Shared -> ["--disable-static", "--enable-shared"]
-                configure = root </> "cbits" </> "configure"
                 fromWindows = map (\c -> if c == '\\' then '/' else c)
             rawSystemExit verbosity "sh" $ [ fromWindows configure
                                            , "--libdir=" ++ fromWindows targetDir
