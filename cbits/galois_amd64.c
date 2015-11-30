@@ -34,7 +34,7 @@
  * - http://eigen.tuxfamily.org/dox/group__TopicWrongStackAlignment.html
  * - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
  */
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
+#if !defined(__clang__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6))
 # warning You have an old C compiler that generates incorrect SIMD allocation code. Using slow work-around.
 # define STACK_ALIGN(t, n)                                                              \
         char _tmp ##n [2 * sizeof(t)];                                                  \
