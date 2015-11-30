@@ -2,7 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([reedsolomon], [0.0.0], [https://github.com/NicolasT/reedsolomon/issues])
+AC_INIT([reedsolomon],
+        m4_esyscmd_s([grep ^Version ../reedsolomon.cabal | sed -e 's/^Version\:[[:space:]]*//']),
+        [https://github.com/NicolasT/reedsolomon/issues],
+        [reedsolomon],
+        [https://github.com/NicolasT/reedsolomon])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([reedsolomon.h])
 AC_CONFIG_HEADERS([config.h])
