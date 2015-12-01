@@ -82,7 +82,7 @@ Library
                      , profunctors >= 4.4 && < 5.2
                      , gitrev >= 1.0 && < 1.2
   Default-Language:    Haskell2010
-  Ghc-Options:         -Wall -O2
+  Ghc-Options:         -Wall -Odph
   if impl(ghc >= 7.10)
     Ghc-Options:       -g
   Ghc-Prof-Options:    -fprof-auto
@@ -98,7 +98,7 @@ Library
 Executable reedsolomon-simple-encoder
   Hs-Source-Dirs:      examples
   Main-Is:             simple-encoder.lhs
-  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
+  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   -- `Build-Depends` goes into the conditional block so Cabal calculates
   -- dependencies correctly, even though `Buildable` is set to `False`.
   -- See https://github.com/haskell/cabal/issues/1725#issuecomment-123783734
@@ -117,7 +117,7 @@ Executable reedsolomon-simple-encoder
 Executable reedsolomon-simple-decoder
   Hs-Source-Dirs:      examples
   Main-Is:             simple-decoder.lhs
-  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
+  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   if !os(windows)
     Build-Depends:     base
                      , bytestring
@@ -133,7 +133,7 @@ Executable reedsolomon-simple-decoder
 Executable reedsolomon-simple-bench
   Hs-Source-Dirs:      examples
   Main-Is:             simple-bench.hs
-  Ghc-Options:         -rtsopts -Wall -O2
+  Ghc-Options:         -rtsopts -Wall -Odph
   if impl(ghc >= 7.10)
     Ghc-Options:       -g
   if flag(LLVM)
@@ -149,7 +149,7 @@ Executable reedsolomon-simple-bench
 Executable reedsolomon-profiling
   Hs-Source-Dirs:      bench
   Main-Is:             profiling.hs
-  Ghc-Options:         -rtsopts -Wall -O2
+  Ghc-Options:         -rtsopts -Wall -Odph
   if impl(ghc >= 7.10)
     Ghc-Options:       -g
   if flag(LLVM)
@@ -199,7 +199,7 @@ Test-Suite reedsolomon-test
                      , random >= 1.1 && < 1.2
                      , reedsolomon
   Default-Language:    Haskell2010
-  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -Wall -O2
+  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -Wall -Odph
   if impl(ghc >= 7.10)
     Ghc-Options:       -g
   if flag(LLVM)
@@ -226,7 +226,7 @@ Benchmark reedsolomon-bench
                      , criterion >= 1.1 && < 1.2
                      , reedsolomon
   Default-Language:    Haskell2010
-  Ghc-Options:         -rtsopts -Wall -O2
+  Ghc-Options:         -rtsopts -Wall -Odph
   if impl(ghc >= 7.10)
     Ghc-Options:       -g
   if flag(LLVM)
