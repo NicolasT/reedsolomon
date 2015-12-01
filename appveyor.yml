@@ -1,3 +1,5 @@
+shallow_clone: true
+
 branches:
   except:
     - /^travisci-.*$/
@@ -16,15 +18,17 @@ cache:
 install:
   - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
   - 7z x stack.zip stack.exe
-  - stack setup > nul
-  - stack build --test --bench --only-snapshot --flag=reedsolomon:-LLVM
+  - echo "" | stack setup
+  - echo "" | stack exec bash -- -lc "mkdir /tmp; pacman --sync --sysupgrade --needed --refresh --noconfirm autoconf automake libtool make"
+  - echo "" | stack build --test --bench --only-snapshot --flag=reedsolomon:-LLVM
 
 build_script:
-  - stack build --pedantic --test --no-run-tests --bench --no-run-benchmarks --flag=reedsolomon:-LLVM
+  - echo "" | stack exec bash -- -lc "cd /c/reedsolomon/cbits; autoreconf -vi"
+  - echo "" | stack build --pedantic --test --no-run-tests --bench --no-run-benchmarks --flag=reedsolomon:-LLVM
 
 test_script:
-  - stack build --pedantic --test --test-arguments "+RTS -N1" --flag=reedsolomon:-LLVM
-  - stack build --pedantic --test --test-arguments "--xml junit.xml +RTS -N1" --flag=reedsolomon:-LLVM
+  - echo "" | stack build --pedantic --test --test-arguments "+RTS -N1" --flag=reedsolomon:-LLVM
+  - echo "" | stack build --pedantic --test --test-arguments "--xml junit.xml +RTS -N1" --flag=reedsolomon:-LLVM
 
 on_finish:
   - ps: (new-object net.webclient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\junit.xml))

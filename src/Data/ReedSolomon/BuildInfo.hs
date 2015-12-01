@@ -44,7 +44,6 @@ mkGitInfo = case gitRevision info of
 
 -- | Cabal flag settings
 data FlagInfo = FlagInfo { flagSIMD :: Bool  -- ^ SIMD flag was set
-                         , flagSIMD_SSE :: Bool  -- ^ SIMD-SSE flag was set
                          , flagLLVM :: Bool  -- ^ LLVM flag was set
                          }
   deriving (Show, Eq)
@@ -56,12 +55,6 @@ mkFlagInfo = FlagInfo{..}
     flagSIMD = True
 #else
     flagSIMD = False
-#endif
-
-#ifdef SIMD_SSE
-    flagSIMD_SSE = True
-#else
-    flagSIMD_SSE = False
 #endif
 
 #ifdef LLVM

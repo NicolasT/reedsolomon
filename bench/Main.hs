@@ -4,6 +4,10 @@
 {-# LANGUAGE RankNTypes #-}
 module Main (main) where
 
+#ifdef SIMD
+# include "config.h"
+#endif
+
 import Control.Monad.ST (ST)
 #ifdef SIMD
 import Data.Bits ((.&.), shiftL)
@@ -16,7 +20,10 @@ import Foreign.C (CSize(..))
 #endif
 
 #ifdef SIMD
-import System.Cpuid (cpuid, cpuidWithIndex)
+import System.Cpuid (cpuid)
+# if RS_HAVE_AVX2
+import System.Cpuid (cpuidWithIndex)
+# endif
 #endif
 
 import Criterion.Main
@@ -36,12 +43,15 @@ import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
 main :: IO ()
 #ifdef SIMD
 main = do
-    (_, _, ecx1, _) <- cpuid 1
+    (_, _, ecx1, edx1) <- cpuid 1
+    let avx = ecx1 .&. (1 `shiftL` 28) /= 0
+        ssse3 = ecx1 .&. (1 `shiftL` 9) /= 0
+        sse2 = edx1 .&. (1 `shiftL` 26) /= 0
+        dependOn b c = if b then Just c else Nothing
+# if RS_HAVE_AVX2
     (_, ebx7, _, _) <- cpuidWithIndex 7 0
     let avx2 = ebx7 .&. (1 `shiftL` 5) /= 0
-        avx = ecx1 .&. (1 `shiftL` 28) /= 0
-        sse41 = ecx1 .&. (1 `shiftL` 19) /= 0
-        dependOn b c = if b then Just c else Nothing
+# endif
 #else
 main =
 #endif
@@ -55,10 +65,12 @@ main =
 #ifdef SIMD
       , bgroup "reedsolomon_gal_mul" $ catMaybes [
             Just $ bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
-          , dependOn avx2 $ bench "AVX2-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2_opt) v1048576
-          , dependOn avx $ bench "AVX-Optimized" $ whnf (benchRGM c_reedsolomon_gal_mul_avx_opt) v1048576
+#if RS_HAVE_AVX2
+          , dependOn avx2 $ bench "AVX2" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2) v1048576
+#endif
           , dependOn avx $ bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
-          , dependOn sse41 $ bench "SSE4.1" $ whnf (benchRGM c_reedsolomon_gal_mul_sse_4_1) v1048576
+          , dependOn ssse3 $ bench "SSSE3" $ whnf (benchRGM c_reedsolomon_gal_mul_ssse3) v1048576
+          , dependOn sse2 $ bench "SSE2" $ whnf (benchRGM c_reedsolomon_gal_mul_sse2) v1048576
           , Just $ bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
           ]
 #endif
@@ -95,9 +107,11 @@ main =
 #ifdef SIMD
 type CProto = Amd64.CProto
 foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
-foreign import ccall unsafe "reedsolomon_gal_mul_avx2_opt" c_reedsolomon_gal_mul_avx2_opt :: CProto
-foreign import ccall unsafe "reedsolomon_gal_mul_avx_opt" c_reedsolomon_gal_mul_avx_opt :: CProto
+#if RS_HAVE_AVX2
+foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_reedsolomon_gal_mul_avx2 :: CProto
+#endif
 foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_reedsolomon_gal_mul_avx :: CProto
-foreign import ccall unsafe "reedsolomon_gal_mul_sse_4_1" c_reedsolomon_gal_mul_sse_4_1 :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_ssse3" c_reedsolomon_gal_mul_ssse3 :: CProto
+foreign import ccall unsafe "reedsolomon_gal_mul_sse2" c_reedsolomon_gal_mul_sse2 :: CProto
 foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_reedsolomon_gal_mul_generic :: CProto
 #endif

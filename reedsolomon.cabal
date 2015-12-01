@@ -3,6 +3,7 @@ Version:             0.0.0.0
 Synopsis:            Reed-Solomon Erasure Coding in Haskell
 Description:         Please see README.md
 Homepage:            http://github.com/NicolasT/reedsolomon
+Bug-Reports:         http://github.com/NicolasT/reedsolomon/issues
 License:             MIT
 License-File:        LICENSE
 Author:              Nicolas Trangez
@@ -12,24 +13,45 @@ Copyright:
     (c) 2015, Klaus Post
     (c) 2015, Backblaze
 Category:            Data
-Build-Type:          Simple
+Build-Type:          Custom
 Extra-Source-Files:  README.md
                    , examples/README.md
                    , stack.yaml
+
+                   , cbits/configure.ac
+                   , cbits/Makefile.am
+                   , cbits/m4/ax_append_compile_flags.m4
+                   , cbits/m4/ax_append_flag.m4
+                   , cbits/m4/ax_check_compile_flag.m4
+                   , cbits/m4/ax_gcc_func_attribute.m4
+                   , cbits/m4/ax_require_defined.m4
+
+                   , cbits/reedsolomon.c
+                   , cbits/reedsolomon.h
+                   , cbits/reedsolomon_dispatch.c
+
+                   , cbits/aclocal.m4
+                   , cbits/ar-lib
+                   , cbits/compile
+                   , cbits/config.guess
+                   , cbits/config.h.in
+                   , cbits/config.sub
+                   , cbits/configure
+                   , cbits/depcomp
+                   , cbits/install-sh
+                   , cbits/ltmain.sh
+                   , cbits/m4/libtool.m4
+                   , cbits/m4/lt~obsolete.m4
+                   , cbits/m4/ltoptions.m4
+                   , cbits/m4/ltsugar.m4
+                   , cbits/m4/ltversion.m4
+                   , cbits/Makefile.in
+                   , cbits/missing
 Cabal-Version:       >=1.10
 
 Flag SIMD
   Description:  Enable SIMD Galois field calculation routines
   Default:      True
-  Manual:       True
-
-Flag SIMD-SSE
-  Description:  When compiling SIMD support, use SSE4 instructions instead of
-                AVX. This is only applicable on non-Linux systems: on Linux
-                systems, instruction support is determined at runtime, and the
-                fastest routines are used. Note disabling AVX instructions has a
-                significant impact on throughput.
-  Default:      False
   Manual:       True
 
 Flag LLVM
@@ -63,31 +85,14 @@ Library
   Ghc-Options:         -Wall -O2
   if impl(ghc >= 7.10)
     Ghc-Options:       -g
+  Ghc-Prof-Options:    -fprof-auto
+
+  if flag(SIMD)
+    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    Extra-Libraries:   reedsolomon
+    Cpp-Options:       -DSIMD
   if flag(LLVM)
     Ghc-Options:       -fllvm
-  Ghc-Prof-Options:    -fprof-auto
-  Cc-Options:          -std=c99 -O3 -funroll-all-loops -ggdb3 -Wall -Wextra
-  if os(windows) || os(osx)
-    if flag(SIMD-SSE)
-      Cc-Options:      -msse4
-    else
-      Cc-Options:      -mavx -mssse3
-  if os(linux)
-      Cc-Options:      -frecord-gcc-switches -grecord-gcc-switches
-  if os(osx)
-      Cc-Options:      -grecord-gcc-switches
-  -- Windows GCC doesn't support either right now
-
-  if flag(SIMD)
-    CPP-Options:       -DSIMD
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
-    C-Sources:         cbits/galois_amd64.c
-
-  if flag(SIMD)
-    Cpp-Options:       -DSIMD
-  if flag(SIMD-SSE)
-    Cpp-Options:       -DSIMD_SSE
-  if flag(LLVM)
     Cpp-Options:       -DLLVM
 
 Executable reedsolomon-simple-encoder

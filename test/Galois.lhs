@@ -3,7 +3,11 @@
 > {-# LANGUAGE ScopedTypeVariables #-}
 > {-# OPTIONS_GHC -fno-warn-orphans #-}
 > module Galois (tests) where
->
+
+#ifdef SIMD
+# include "config.h"
+#endif
+
 > import Prelude hiding (LT)
 >
 > import Control.Monad (foldM, void, when)
@@ -25,7 +29,10 @@
 > import qualified Data.Vector.Storable as SV
 >
 #ifdef SIMD
-> import System.Cpuid (cpuid, cpuidWithIndex)
+> import System.Cpuid (cpuid)
+# if RS_HAVE_AVX2
+> import System.Cpuid (cpuidWithIndex)
+# endif
 #endif
 >
 > import Test.Tasty (TestTree, testGroup)
@@ -376,10 +383,12 @@ func TestGalois(t *testing.T) {
 
 > type CProto = Amd64.CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul" c_rgm :: CProto
-> foreign import ccall unsafe "reedsolomon_gal_mul_avx2_opt" c_rgm_avx2_opt :: CProto
-> foreign import ccall unsafe "reedsolomon_gal_mul_avx_opt" c_rgm_avx_opt :: CProto
+#if RS_HAVE_AVX2
+> foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_rgm_avx2 :: CProto
+#endif
 > foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_rgm_avx :: CProto
-> foreign import ccall unsafe "reedsolomon_gal_mul_sse_4_1" c_rgm_sse41 :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_ssse3" c_rgm_ssse3 :: CProto
+> foreign import ccall unsafe "reedsolomon_gal_mul_sse2" c_rgm_sse2 :: CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_rgm_generic :: CProto
 #endif
 
@@ -402,14 +411,16 @@ func TestGalois(t *testing.T) {
 >                 ]
 >           , testGroup "cbits" [
 >                   testGroup "reedsolomon_gal_mul" $ catMaybes [
->                         dependOn avx2 $ testProperty "native/avx2_opt" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx2_opt
->                       , dependOn avx $ testProperty "native/avx_opt" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx_opt
->                       , dependOn avx $ testProperty "native/avx" $
+#if RS_HAVE_AVX2
+>                         dependOn avx2 $ testProperty "native/avx2" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx2,
+#endif
+>                         dependOn avx $ testProperty "native/avx" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx
->                       , dependOn sse41 $ testProperty "native/sse4.1" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse41
+>                       , dependOn ssse3 $ testProperty "native/ssse3" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_ssse3
+>                       , dependOn sse2 $ testProperty "native/sse2" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse2
 >                       , Just $ testProperty "native/generic" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_generic
 >                       ]
@@ -419,10 +430,13 @@ func TestGalois(t *testing.T) {
 >     ]
 #ifdef SIMD
 >   where
->     (_, _, ecx1, _) = unsafePerformIO $ cpuid 1
+>     (_, _, ecx1, edx1) = unsafePerformIO $ cpuid 1
+#if RS_HAVE_AVX2
 >     (_, ebx7, _, _) = unsafePerformIO $ cpuidWithIndex 7 0
 >     avx2 = ebx7 .&. (1 `shiftL` 5) /= 0
+#endif
 >     avx = ecx1 .&. (1 `shiftL` 28) /= 0
->     sse41 = ecx1 .&. (1 `shiftL` 19) /= 0
+>     ssse3 = ecx1 .&. (1 `shiftL` 9) /= 0
+>     sse2 = edx1 .&. (1 `shiftL` 26) /= 0
 >     dependOn b c = if b then Just c else Nothing
 #endif
