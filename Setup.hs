@@ -160,6 +160,6 @@ customPreSDist innerHook args flags = do
         verbosity = fromFlag (sDistVerbosity flags)
 
     withCurrentDirectory cbits $
-        rawSystemExit verbosity "autoreconf" ["-i"]
+        rawSystemExit verbosity "autoreconf" ["-f", "-i"]
 
     return hookedBuildInfo
