@@ -98,7 +98,7 @@ Library
 Executable reedsolomon-simple-encoder
   Hs-Source-Dirs:      examples
   Main-Is:             simple-encoder.lhs
-  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
+  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   -- `Build-Depends` goes into the conditional block so Cabal calculates
   -- dependencies correctly, even though `Buildable` is set to `False`.
   -- See https://github.com/haskell/cabal/issues/1725#issuecomment-123783734
@@ -117,7 +117,7 @@ Executable reedsolomon-simple-encoder
 Executable reedsolomon-simple-decoder
   Hs-Source-Dirs:      examples
   Main-Is:             simple-decoder.lhs
-  Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N
+  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   if !os(windows)
     Build-Depends:     base
                      , bytestring
