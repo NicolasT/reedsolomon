@@ -66,8 +66,8 @@ AM_CONDITIONAL(RS_HAVE_AVX2, [test x$rs_avx2 = x1])
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([inttypes.h unistd.h])
-AC_CHECK_HEADERS([immintrin.h cpuid.h])
+AC_CHECK_HEADERS([stddef.h stdint.h unistd.h])
+AC_CHECK_HEADERS([cpuid.h immintrin.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -75,6 +75,7 @@ AC_C_INLINE
 AC_C_RESTRICT
 AC_TYPE_SIZE_T
 AC_TYPE_UINT8_T
+AC_TYPE_UINT64_T
 
 # Checks for library functions.
 
