@@ -15,6 +15,8 @@
 
 PROTO(reedsolomon_gal_mul_avx2);
 PROTO(reedsolomon_gal_mul_xor_avx2);
+PROTO(reedsolomon_gal_mul_avx);
+PROTO(reedsolomon_gal_mul_xor_avx);
 PROTO(reedsolomon_gal_mul_ssse3);
 PROTO(reedsolomon_gal_mul_xor_ssse3);
 PROTO(reedsolomon_gal_mul_sse2);
