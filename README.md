@@ -23,18 +23,39 @@ Performance depends mainly on the number of parity shards. In rough terms, doubl
 
 Here are the throughput numbers with some different selections of data and parity shards. For reference each shard is 1MB random data, and 1 CPU core is used for encoding.
 
-| Data | Parity | Parity | SSSE3 MB/s | AVX2 MB/s |
-|------|--------|--------|------------|-----------|
-| 5    | 2      | 40%    | 3641,66    | 3987,24   |
-| 10   | 2      | 20%    | 3951,01    | 4444,44   |
-| 10   | 4      | 40%    | 1821,16    | 1927,90   |
-| 50   | 20     | 40%    |  398,09    |  431,78   |
+<table>
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th>Parity</th>
+      <th>Parity</th>
+      <th>SSSE3 MB/s</th>
+      <th>AVX2 MB/s</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>5</td><td>2</td><td>40%</td><td>3641,66</td><td>3987,24</td></tr>
+    <tr><td>10</td><td>2</td><td>20%</td><td>3951,01</td><td>4444,44</td></tr>
+    <tr><td>10</td><td>4</td><td>40%</td><td>1821,16</td><td>1927,90</td></tr>
+    <tr><td>50</td><td>20</td><td>40%</td><td>398,09</td><td>431,78</td></tr>
+  </tbody>
+</table>
 
 Example of performance on Intel(R) Core(TM) i7-4600U CPU @ 3.30GHz - 2 physical cores, 4 logical cores (note: `/proc/cpuinfo` mentions 2.10GHz only). The example uses 10 blocks with 16MB data each and 4 parity blocks.
 
-| Threads | SSSE3 MB/s | AVX2 MB/s | Speed |
-|---------|------------|-----------|-------|
-| 1       | 1551,89    | 1588,88   | 100%  |
+<table>
+  <thead>
+    <tr>
+      <th>Threads</th>
+      <th>SSSE3 MB/s</th>
+      <th>AVX2 MB/s</th>
+      <th>Speed</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>1551,89</td><td>1588,88</td><td>100%</td></tr>
+  </tbody>
+</table>
 
 # Links
 * [Backblaze Open Sources Reed-Solomon Erasure Coding Source Code](https://www.backblaze.com/blog/reed-solomon/).
