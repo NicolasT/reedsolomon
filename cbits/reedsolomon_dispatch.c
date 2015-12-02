@@ -73,7 +73,11 @@ static inline ALWAYS_INLINE int __get_cpuid_count(
                 else {                                                                          \
                         IFUNC_AVX2(n, func);                                                    \
                         if(func == NULL) {                                                      \
-                                if((cpuid1.ecx & bit_SSSE3) != 0) {                             \
+                                if((cpuid1.ecx & bit_AVX) != 0) {                               \
+                                        LOG("reedsolomon: using " #n "_avx");                   \
+                                        func = n ## _avx;                                       \
+                                }                                                               \
+                                else if((cpuid1.ecx & bit_SSSE3) != 0) {                        \
                                         LOG("reedsolomon: using " #n "_ssse3");                 \
                                         func = n ## _ssse3;                                     \
                                 }                                                               \
