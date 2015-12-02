@@ -48,8 +48,8 @@ customPostConf innerHook args configFlags packageDescription@PackageDescription{
 data LibraryType = Static | Shared
   deriving (Show, Eq)
 
-buildLibrary :: Verbosity -> FilePath -> LibraryType -> IO FilePath
-buildLibrary verbosity buildDir libType = do
+buildLibrary :: Verbosity -> FilePath -> Version -> LibraryType -> IO FilePath
+buildLibrary verbosity buildDir version libType = do
     root <- makeAbsolute =<< getCurrentDirectory
     absBuildDir <- makeAbsolute buildDir
     let cbitsBuildDir = absBuildDir </> "cbits"
@@ -74,11 +74,14 @@ buildLibrary verbosity buildDir libType = do
             let libOptions = case libType of
                     Static -> ["--enable-static", "--disable-shared"]
                     Shared -> ["--disable-static", "--enable-shared"]
+                libOptions' = libOptions ++ case versionBranch version of
+                    [999] -> []
+                    _ -> ["--disable-maintainer-mode"]
                 fromWindows = map (\c -> if c == '\\' then '/' else c)
             rawSystemExit verbosity "sh" $ [ fromWindows configure
                                            , "--libdir=" ++ fromWindows targetDir
                                            , "--with-pic"
-                                           ] ++ libOptions
+                                           ] ++ libOptions'
 
     rawSystemExit verbosity "make" ["-C", targetDir, "--no-print-directory", "install"]
 
@@ -96,7 +99,7 @@ setupLibrary verbosity buildDir configFlags buildType packageDescription = do
     if not wantSIMD
     then return packageDescription
     else do
-        libDir <- buildLibrary verbosity buildDir buildType
+        libDir <- buildLibrary verbosity buildDir (pkgVersion $ package packageDescription) buildType
 
         let updateBuildInfo buildInfo = buildInfo {
               extraLibDirs = libDir : extraLibDirs buildInfo
