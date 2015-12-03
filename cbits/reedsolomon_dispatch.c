@@ -38,61 +38,82 @@ static inline ALWAYS_INLINE int __get_cpuid_count(
         return 1;
 }
 
+struct cpuid_registers {
+        unsigned int eax, ebx, ecx, edx;
+};
+
+reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
+        struct cpuid_registers cpuid1 = { 0, 0, 0, 0 };
+        unsigned int rc1 = 0;
+        reedsolomon_cpu_support result = REEDSOLOMON_CPU_GENERIC;
+
+        rc1 = __get_cpuid(1, &cpuid1.eax, &cpuid1.ebx, &cpuid1.ecx, &cpuid1.edx);
+
+        if(rc1 == 0) {
+                result = REEDSOLOMON_CPU_GENERIC;
+        }
+        else {
 #if RS_HAVE_AVX2
-# define IFUNC_AVX2(n, result)                                                                          \
-        do {                                                                                            \
-                int avx2_rc = 0;                                                                        \
-                struct {                                                                                \
-                        unsigned int eax, ebx, ecx, edx;                                                \
-                } cpuid7 = { 0, 0, 0, 0 };                                                              \
-                                                                                                        \
-                avx2_rc = __get_cpuid_count(7, 0, &cpuid7.eax, &cpuid7.ebx, &cpuid7.ecx, &cpuid7.edx);  \
-                                                                                                        \
-                if(avx2_rc != 0 && (cpuid7.ebx & bit_AVX2) != 0) {                                      \
-                        LOG("reedsolomon: using " #n "_avx2");                                          \
-                        result = n ## _avx2;                                                            \
-                }                                                                                       \
-        } while(0)
+                struct cpuid_registers cpuid7 = { 0, 0, 0, 0 };
+                unsigned int rc7 = 0;
+
+                rc7 = __get_cpuid_count(7, 0, &cpuid7.eax, &cpuid7.ebx, &cpuid7.ecx, &cpuid7.edx);
+                if(rc7 != 0 && (cpuid7.ebx & bit_AVX2) != 0) {
+                        result = REEDSOLOMON_CPU_AVX2;
+                }
+                else {
 #else
-# define IFUNC_AVX2(n, result)
+                if(1) {
+#endif
+                        if((cpuid1.ecx & bit_AVX) != 0) {
+                                result = REEDSOLOMON_CPU_AVX;
+                        }
+                        else if((cpuid1.ecx & bit_SSSE3) != 0) {
+                                result = REEDSOLOMON_CPU_SSSE3;
+                        }
+                        else if((cpuid1.edx & bit_SSE2) != 0) {
+                                result = REEDSOLOMON_CPU_SSE2;
+                        }
+                        else {
+                                result = REEDSOLOMON_CPU_GENERIC;
+                        }
+                }
+        }
+
+        return result;
+}
+
+#define CASE(n, lower, upper)                                   \
+        case REEDSOLOMON_CPU_ ## upper: {                       \
+                LOG("reedsolomon: using " #n "_" #lower);       \
+                result = n ## _ ## lower;                       \
+        } break
+
+#if RS_HAVE_AVX2
+# define MAYBE_AVX2(n) \
+        CASE(n, avx2, AVX2)
+#else
+# define MAYBE_AVX2(n)
 #endif
 
-#define IFUNC(n, proto)                                                                         \
-        static proto n ## _ifunc(void) {                                                        \
-                struct {                                                                        \
-                        unsigned int eax, ebx, ecx, edx;                                        \
-                } cpuid1 = { 0, 0, 0, 0 };                                                      \
-                int rc = 0;                                                                     \
-                proto func = NULL;                                                              \
-                                                                                                \
-                rc = __get_cpuid(1, &cpuid1.eax, &cpuid1.ebx, &cpuid1.ecx, &cpuid1.edx);        \
-                if(rc == 0) {                                                                   \
-                        LOG("reedsolomon: cpuid failed, using " #n "_generic");                 \
-                        func = n ## _generic;                                                   \
-                }                                                                               \
-                else {                                                                          \
-                        IFUNC_AVX2(n, func);                                                    \
-                        if(func == NULL) {                                                      \
-                                if((cpuid1.ecx & bit_AVX) != 0) {                               \
-                                        LOG("reedsolomon: using " #n "_avx");                   \
-                                        func = n ## _avx;                                       \
-                                }                                                               \
-                                else if((cpuid1.ecx & bit_SSSE3) != 0) {                        \
-                                        LOG("reedsolomon: using " #n "_ssse3");                 \
-                                        func = n ## _ssse3;                                     \
-                                }                                                               \
-                                else if((cpuid1.edx & bit_SSE2) != 0) {                         \
-                                        LOG("reedsolomon: using " #n "_sse2");                  \
-                                        func = n ## _sse2;                                      \
-                                }                                                               \
-                                else {                                                          \
-                                        LOG("reedsolomon: using " #n "_generic");               \
-                                        func = n ## _generic;                                   \
-                                }                                                               \
-                        }                                                                       \
-                }                                                                               \
-                                                                                                \
-                return func;                                                                    \
+#define IFUNC(n, proto)                                                                 \
+        static proto n ## _ifunc(void) {                                                \
+                reedsolomon_cpu_support level = reedsolomon_determine_cpu_support();    \
+                proto result = n ## _generic;                                           \
+                                                                                        \
+                switch(level) {                                                         \
+                        MAYBE_AVX2(n);                                                  \
+                        CASE(n, avx, AVX);                                              \
+                        CASE(n, ssse3, SSSE3);                                          \
+                        CASE(n, sse2, SSE2);                                            \
+                        CASE(n, generic, GENERIC);                                      \
+                        default: {                                                      \
+                                LOG("reedsolomon: using " #n "_generic");               \
+                                result = n ## _generic;                                 \
+                        }                                                               \
+                }                                                                       \
+                                                                                        \
+                return result;                                                          \
         }
 
 typedef PROTO_RETURN(*gal_mul_proto)(PROTO_ARGS);

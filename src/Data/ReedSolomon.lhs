@@ -33,6 +33,9 @@
 >     -- * Exceptions
 >     , ShardType(..)
 >     , ValueError(..)
+>     -- * Determining runtime SIMD instruction support
+>     , SIMDInstructions(..)
+>     , simdInstructions
 >     ) where
 >
 > import Prelude hiding (any)
@@ -44,6 +47,10 @@
 > import Data.Maybe (fromJust, fromMaybe)
 > import Data.Typeable (Typeable)
 > import Data.Word
+>
+#if SIMD
+> import Foreign.C (CInt(..))
+#endif
 >
 > import Control.Monad.Catch (MonadThrow, throwM)
 >
@@ -841,3 +848,26 @@ func (r reedSolomon) Join(dst io.Writer, shards [][]byte, outSize int) error {
 >     | V.length shards < rsDataShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)
 >     | V.sum (V.map V.length shards) < outSize = throwM InvalidDataSize
 >     | otherwise = return $ V.take outSize $ V.concat $ V.toList shards
+
+> -- | Enumeration of SIMD instruction sets.
+> data SIMDInstructions = Generic
+>                       | SSE2
+>                       | SSSE3
+>                       | AVX
+>                       | AVX2
+>   deriving (Show, Eq, Ord, Enum, Bounded)
+>
+> -- | Retrieve the SIMD instruction set used by 'native' Galois field operations.
+> --
+> -- Returns 'Nothing' when the library is compiled without SIMD support,
+> -- otherwise 'Just' the runtime-determined SIMD instruction set used for
+> -- optimized Galois field calculations.
+> simdInstructions :: IO (Maybe SIMDInstructions)
+> simdInstructions =
+#if !SIMD
+>       return Nothing
+#else
+>       (Just . toEnum . fromIntegral) `fmap` c_reedsolomon_determine_cpu_support
+>
+> foreign import ccall unsafe "reedsolomon_determine_cpu_support" c_reedsolomon_determine_cpu_support :: IO CInt
+#endif

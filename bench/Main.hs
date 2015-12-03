@@ -10,20 +10,12 @@ module Main (main) where
 
 import Control.Monad.ST (ST)
 #ifdef SIMD
-import Data.Bits ((.&.), shiftL)
 import Data.Maybe (catMaybes)
 #endif
 import Data.Word (Word8)
 
 #ifdef SIMD
 import Foreign.C (CSize(..))
-#endif
-
-#ifdef SIMD
-import System.Cpuid (cpuid)
-# if RS_HAVE_AVX2
-import System.Cpuid (cpuidWithIndex)
-# endif
 #endif
 
 import Criterion.Main
@@ -34,27 +26,23 @@ import qualified Data.Vector.Storable as SV
 
 #ifdef SIMD
 import qualified Data.Vector.Generic.Sized as S
+import Data.ReedSolomon (SIMDInstructions(..))
 #endif
+import qualified Data.ReedSolomon as RS
 import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
 #ifdef SIMD
 import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
 #endif
 
 main :: IO ()
-#ifdef SIMD
 main = do
-    (_, _, ecx1, edx1) <- cpuid 1
-    let avx = ecx1 .&. (1 `shiftL` 28) /= 0
-        ssse3 = ecx1 .&. (1 `shiftL` 9) /= 0
-        sse2 = edx1 .&. (1 `shiftL` 26) /= 0
-        dependOn b c = if b then Just c else Nothing
-# if RS_HAVE_AVX2
-    (_, ebx7, _, _) <- cpuidWithIndex 7 0
-    let avx2 = ebx7 .&. (1 `shiftL` 5) /= 0
-# endif
-#else
-main =
+    level <- RS.simdInstructions
+    putStrLn $ "Native instructions: " ++ maybe "None" show level
+
+#ifdef SIMD
+    let dependOn l prop = maybe Nothing (\lvl -> if l <= lvl then Just prop else Nothing ) level
 #endif
+
     defaultMain [
         bgroup "Galois/galMulSlice/1048576" [
             bench "NoAsm" $ whnf (benchGalMulSlice NoAsm.galMulSlice 177) v1048576
@@ -66,11 +54,11 @@ main =
       , bgroup "reedsolomon_gal_mul" $ catMaybes [
             Just $ bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
 #if RS_HAVE_AVX2
-          , dependOn avx2 $ bench "AVX2" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2) v1048576
+          , dependOn AVX2 $ bench "AVX2" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2) v1048576
 #endif
-          , dependOn avx $ bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
-          , dependOn ssse3 $ bench "SSSE3" $ whnf (benchRGM c_reedsolomon_gal_mul_ssse3) v1048576
-          , dependOn sse2 $ bench "SSE2" $ whnf (benchRGM c_reedsolomon_gal_mul_sse2) v1048576
+          , dependOn AVX $ bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
+          , dependOn SSSE3 $ bench "SSSE3" $ whnf (benchRGM c_reedsolomon_gal_mul_ssse3) v1048576
+          , dependOn SSE2 $ bench "SSE2" $ whnf (benchRGM c_reedsolomon_gal_mul_sse2) v1048576
           , Just $ bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
           ]
 #endif

@@ -45,6 +45,9 @@ main = do
 
     let [dataShards, parityShards, dataSize] = fmap read args
 
+    instructionSet <- RS.simdInstructions
+    printf "Using CPU instructions: %s\n" (maybe "None" show instructionSet)
+
     putStrLn "generating encoder..."
     encoder <- RS.new dataShards parityShards
 

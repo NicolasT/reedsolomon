@@ -26,3 +26,13 @@ PROTO(reedsolomon_gal_mul_xor_generic);
 
 PROTO(reedsolomon_gal_mul);
 PROTO(reedsolomon_gal_mul_xor);
+
+typedef enum {
+        REEDSOLOMON_CPU_GENERIC = 0,
+        REEDSOLOMON_CPU_SSE2 = 1,
+        REEDSOLOMON_CPU_SSSE3 = 2,
+        REEDSOLOMON_CPU_AVX = 3,
+        REEDSOLOMON_CPU_AVX2 = 4,
+} reedsolomon_cpu_support;
+
+reedsolomon_cpu_support reedsolomon_determine_cpu_support(void);
