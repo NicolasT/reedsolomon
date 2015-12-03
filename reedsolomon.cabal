@@ -1,5 +1,5 @@
 Name:                reedsolomon
-Version:             999
+Version:             0.0.2.0
 Synopsis:            Reed-Solomon Erasure Coding in Haskell
 Description:         Please see README.md
 Homepage:            http://github.com/NicolasT/reedsolomon
