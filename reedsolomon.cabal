@@ -18,6 +18,8 @@ Extra-Source-Files:  README.md
                    , examples/README.md
                    , stack.yaml
 
+                   , build-tools/ar-wrapper
+
                    , cbits/configure.ac
                    , cbits/Makefile.am
                    , cbits/m4/ax_append_compile_flags.m4
@@ -81,7 +83,6 @@ Library
 
   if flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
-    Extra-Libraries:   reedsolomon
     Cpp-Options:       -DSIMD
   if flag(LLVM)
     Ghc-Options:       -fllvm
