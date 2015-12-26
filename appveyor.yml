@@ -19,7 +19,7 @@ install:
   - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
   - 7z x stack.zip stack.exe
   - echo "" | stack setup
-  - echo "" | stack exec bash -- -lc "mkdir /tmp; pacman --sync --sysupgrade --needed --refresh --noconfirm autoconf automake libtool make"
+  - echo "" | stack exec bash -- -lc "mkdir /tmp; pacman --sync --sysupgrade --needed --refresh --noconfirm autoconf automake make"
   - echo "" | stack build --test --bench --only-snapshot --flag=reedsolomon:-LLVM
 
 build_script:
