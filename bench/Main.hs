@@ -16,6 +16,7 @@ import Data.Word (Word8)
 
 #ifdef SIMD
 import Foreign.C (CSize(..))
+import Foreign.Ptr (Ptr)
 #endif
 
 import Criterion.Main
@@ -61,6 +62,9 @@ main = do
           , dependOn SSE2 $ bench "SSE2" $ whnf (benchRGM c_reedsolomon_gal_mul_sse2) v1048576
           , Just $ bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
           ]
+      , bgroup "memcpy" [
+            bench "memcpy" $ whnf (benchRGM memcpyAsCProto) v1048576
+          ]
 #endif
       ]
   where
@@ -102,4 +106,11 @@ foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_reedsolomon_gal_mul_avx 
 foreign import ccall unsafe "reedsolomon_gal_mul_ssse3" c_reedsolomon_gal_mul_ssse3 :: CProto
 foreign import ccall unsafe "reedsolomon_gal_mul_sse2" c_reedsolomon_gal_mul_sse2 :: CProto
 foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_reedsolomon_gal_mul_generic :: CProto
+
+foreign import ccall unsafe "memcpy" c_memcpy :: Ptr a -> Ptr a -> CSize -> IO ()
+
+memcpyAsCProto :: CProto
+memcpyAsCProto _ _ in_ out len = do
+    c_memcpy out in_ len
+    return len
 #endif
