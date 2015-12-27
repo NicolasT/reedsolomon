@@ -4,7 +4,7 @@ import Prelude hiding ((<$>))
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Maybe (fromMaybe, isJust)
 
 import System.Directory hiding (makeAbsolute, withCurrentDirectory)
@@ -13,6 +13,9 @@ import System.FilePath
 import Distribution.PackageDescription
 import Distribution.Simple
 import Distribution.Simple.LocalBuildInfo
+import Distribution.Simple.Program.Builtin (arProgram, ghcProgram)
+import qualified Distribution.Simple.Program.Db as Db
+import Distribution.Simple.Program.Types (ConfiguredProgram(..), Program(..), ProgramLocation(..))
 import Distribution.Simple.Setup
 import Distribution.Simple.Utils
 import Distribution.Verbosity
@@ -20,98 +23,48 @@ import Distribution.Verbosity
 main :: IO ()
 main = defaultMainWithHooks customHooks
   where
-    customHooks = simpleUserHooks { postConf = customPostConf (postConf simpleUserHooks)
+    customHooks = simpleUserHooks { confHook = customConfHook (confHook simpleUserHooks)
                                   , buildHook = customBuildHook (buildHook simpleUserHooks)
-                                  , replHook = customReplHook (replHook simpleUserHooks)
                                   , preSDist = customPreSDist (preSDist simpleUserHooks)
                                   }
 
-customPostConf :: (Args -> ConfigFlags -> PackageDescription -> LocalBuildInfo -> IO ())
-               -> Args
-               -> ConfigFlags
-               -> PackageDescription
-               -> LocalBuildInfo
-               -> IO ()
-customPostConf innerHook args configFlags packageDescription@PackageDescription{..} =
-    innerHook args configFlags packageDescription'
-  where
-    packageDescription' = case library of
-        Nothing -> packageDescription
-        Just library'@Library{..} -> packageDescription {
-            library = Just library' {
-                libBuildInfo = libBuildInfo {
-                    extraLibs = filter ("reedsolomon" /=) (extraLibs libBuildInfo)
-                }
-            }
-        }
+customConfHook :: (a -> b -> IO LocalBuildInfo)
+               -> a
+               -> b
+               -> IO LocalBuildInfo
+customConfHook innerHook a b = do
+    localBuildInfo <- innerHook a b
 
-data LibraryType = Static | Shared
-  deriving (Show, Eq)
-
-buildLibrary :: Verbosity -> FilePath -> Version -> LibraryType -> IO FilePath
-buildLibrary verbosity buildDir version libType = do
     root <- makeAbsolute =<< getCurrentDirectory
-    absBuildDir <- makeAbsolute buildDir
-    let cbitsBuildDir = absBuildDir </> "cbits"
-        suffix = case libType of
-                    Static -> "static"
-                    Shared -> "shared"
-        targetDir = cbitsBuildDir </> suffix
-        configure = root </> "cbits" </> "configure"
 
-    configureExists <- doesFileExist configure
-    unless configureExists $
-        die $ concat [ "'configure' script not found. "
-                     , "If this is not a release version, you probably need "
-                     , "to run 'autoreconf -i' in the 'cbits' directory to generate it."
-                     ]
+    let cabalBuildDir = buildDir localBuildInfo
+        sh = "sh"
 
-    createDirectoryIfMissing True targetDir
+        Just ar = Db.lookupProgram arProgram (withPrograms localBuildInfo)
+        arLocation = resolveProgramLocation ar
+        arWrapperPath = root </> "build-tools" </> "ar-wrapper"
+        arWrapper = ar { programDefaultArgs = arWrapperPath : arLocation : programDefaultArgs ar
+                       , programLocation = UserSpecified sh
+                       , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ar
+                       }
 
-    hasMakefile <- doesFileExist (targetDir </> "Makefile")
-    unless hasMakefile $
-        withCurrentDirectory targetDir $ do
-            let libOptions = case libType of
-                    Static -> ["--enable-static", "--disable-shared"]
-                    Shared -> ["--disable-static", "--enable-shared"]
-                libOptions' = libOptions ++ case versionBranch version of
-                    [999] -> []
-                    _ -> ["--disable-maintainer-mode"]
-                fromWindows = map (\c -> if c == '\\' then '/' else c)
-            rawSystemExit verbosity "sh" $ [ fromWindows configure
-                                           , "--libdir=" ++ fromWindows targetDir
-                                           , "--with-pic"
-                                           ] ++ libOptions'
+        Just ghc = Db.lookupProgram ghcProgram (withPrograms localBuildInfo)
+        ghcLocation = resolveProgramLocation ghc
+        ghcWrapperPath = root </> "build-tools" </> "ghc-wrapper"
+        ghcWrapper = ghc { programDefaultArgs = ghcWrapperPath : ghcLocation : programDefaultArgs ghc
+                         , programLocation = UserSpecified sh
+                         , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ghc
+                         }
 
-    rawSystemExit verbosity "make" ["-C", targetDir, "--no-print-directory", "install"]
+        withPrograms' = Db.updateProgram arWrapper $
+                            Db.updateProgram ghcWrapper $
+                            withPrograms localBuildInfo
 
-    return targetDir
-
-setupLibrary :: Verbosity
-             -> FilePath
-             -> ConfigFlags
-             -> LibraryType
-             -> PackageDescription
-             -> IO PackageDescription
-setupLibrary verbosity buildDir configFlags buildType packageDescription = do
-    let wantSIMD = fromMaybe True $ lookup (FlagName "simd") $ configConfigurationsFlags configFlags
-
-    if not wantSIMD
-    then return packageDescription
-    else do
-        libDir <- buildLibrary verbosity buildDir (pkgVersion $ package packageDescription) buildType
-
-        let updateBuildInfo buildInfo = buildInfo {
-              extraLibDirs = libDir : extraLibDirs buildInfo
-            , includeDirs = libDir : includeDirs buildInfo
-            }
-
-        return $ packageDescription {
-              library = fmap (\l -> l { libBuildInfo = updateBuildInfo (libBuildInfo l) }) (library packageDescription)
-            , executables = map (\e -> e { buildInfo = updateBuildInfo (buildInfo e) }) (executables packageDescription)
-            , testSuites = map (\t -> t { testBuildInfo = updateBuildInfo (testBuildInfo t) }) (testSuites packageDescription)
-            , benchmarks = map (\b -> b { benchmarkBuildInfo = updateBuildInfo (benchmarkBuildInfo b) }) (benchmarks packageDescription)
-            }
+    return localBuildInfo { withPrograms = withPrograms' }
+  where
+    resolveProgramLocation prog = case programLocation prog of
+                                    UserSpecified path -> path
+                                    FoundOnSystem path -> path
 
 customBuildHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> BuildFlags -> IO ())
                 -> PackageDescription
@@ -120,21 +73,52 @@ customBuildHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> BuildFl
                 -> BuildFlags
                 -> IO ()
 customBuildHook innerHook packageDescription@PackageDescription{..} localBuildInfo@LocalBuildInfo{..} userHooks buildFlags = do
-    packageDescription' <- setupLibrary (fromFlag $ buildVerbosity buildFlags) buildDir configFlags Static packageDescription
+    let wantSIMD = fromMaybe True $ lookup (FlagName "simd") $ configConfigurationsFlags configFlags
+        verbosity = fromFlag $ buildVerbosity buildFlags
+        version = pkgVersion package
+
+    root <- makeAbsolute =<< getCurrentDirectory
+    absBuildDir <- makeAbsolute buildDir
+    let cbitsBuildDir = absBuildDir </> "cbits"
+
+    when wantSIMD $ do
+        let configure = root </> "cbits" </> "configure"
+
+        configureExists <- doesFileExist configure
+        unless configureExists $
+            die $ concat [ "'configure' script not found. "
+                         , "If this is not a release version, you probably need "
+                         , "to run 'autoreconf -i' in the 'cbits' directory to generate it."
+                         ]
+
+        createDirectoryIfMissing True cbitsBuildDir
+
+        hasMakefile <- doesFileExist (cbitsBuildDir </> "Makefile")
+        unless hasMakefile $
+            withCurrentDirectory cbitsBuildDir $ do
+                let libOptions = case versionBranch version of
+                        [999] -> []
+                        _ -> ["--disable-maintainer-mode"]
+                    fromWindows = map (\c -> if c == '\\' then '/' else c)
+                rawSystemExit verbosity "sh" $ [ fromWindows configure
+                                               , "--with-pic"
+                                               ] ++ libOptions
+
+        rawSystemExit verbosity "make" ["-C", cbitsBuildDir, "--no-print-directory"]
+
+    let addIncludeDir info = info { includeDirs = cbitsBuildDir : includeDirs info }
+        packageDescription' = if wantSIMD
+                                then mapBuildInfo addIncludeDir packageDescription
+                                else packageDescription
 
     innerHook packageDescription' localBuildInfo userHooks buildFlags
 
-customReplHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> ReplFlags -> [String] -> IO ())
-               -> PackageDescription
-               -> LocalBuildInfo
-               -> UserHooks
-               -> ReplFlags
-               -> [String]
-               -> IO ()
-customReplHook innerHook packageDescription@PackageDescription{..} localBuildInfo@LocalBuildInfo{..} userHooks replFlags strings = do
-    packageDescription' <- setupLibrary (fromFlag $ replVerbosity replFlags) buildDir configFlags Shared packageDescription
-
-    innerHook packageDescription' localBuildInfo userHooks replFlags strings
+mapBuildInfo :: (BuildInfo -> BuildInfo) -> PackageDescription -> PackageDescription
+mapBuildInfo f desc = desc { library = fmap (\l -> l { libBuildInfo = f (libBuildInfo l) }) (library desc)
+                           , executables = map (\e -> e { buildInfo = f (buildInfo e) }) (executables desc)
+                           , testSuites = map (\t -> t { testBuildInfo = f (testBuildInfo t) }) (testSuites desc)
+                           , benchmarks = map (\b -> b { benchmarkBuildInfo = f (benchmarkBuildInfo b) }) (benchmarks desc)
+                           }
 
 makeAbsolute :: FilePath -> IO FilePath
 makeAbsolute = (normalise <$>) . absolutize

@@ -18,6 +18,9 @@ Extra-Source-Files:  README.md
                    , examples/README.md
                    , stack.yaml
 
+                   , build-tools/ar-wrapper
+                   , build-tools/ghc-wrapper
+
                    , cbits/configure.ac
                    , cbits/Makefile.am
                    , cbits/m4/ax_append_compile_flags.m4
@@ -33,18 +36,10 @@ Extra-Source-Files:  README.md
                    , cbits/aclocal.m4
                    , cbits/ar-lib
                    , cbits/compile
-                   , cbits/config.guess
                    , cbits/config.h.in
-                   , cbits/config.sub
                    , cbits/configure
                    , cbits/depcomp
                    , cbits/install-sh
-                   , cbits/ltmain.sh
-                   , cbits/m4/libtool.m4
-                   , cbits/m4/lt~obsolete.m4
-                   , cbits/m4/ltoptions.m4
-                   , cbits/m4/ltsugar.m4
-                   , cbits/m4/ltversion.m4
                    , cbits/Makefile.in
                    , cbits/missing
 Cabal-Version:       >=1.10
@@ -89,7 +84,6 @@ Library
 
   if flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
-    Extra-Libraries:   reedsolomon
     Cpp-Options:       -DSIMD
   if flag(LLVM)
     Ghc-Options:       -fllvm
