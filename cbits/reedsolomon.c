@@ -264,19 +264,17 @@ PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
         const v low_vector = replicate_v128_v(low_vector128),
                 high_vector = replicate_v128_v(high_vector128);
 
-        const uint8_t *curr_in = in;
-        uint8_t *curr_out = out;
-
         v in_x,
           high_input,
           low_input,
           mul_low_part,
           mul_high_part,
           result;
-        size_t x = len / sizeof(v);
+        size_t x = 0,
+               done = 0;
 
-        while(x > 0) {
-                in_x = loadu_v(curr_in);
+        for(x = 0; x < len / sizeof(v); x++) {
+                in_x = loadu_v(&in[done]);
 
                 low_input = and_v(in_x, low_mask_unpacked);
                 high_input = and_v(srli_epi64_v(in_x, 4), low_mask_unpacked);
@@ -286,14 +284,12 @@ PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
 
                 result = xor_v(mul_low_part, mul_high_part);
 
-                storeu_v(curr_out, result);
+                storeu_v(&out[done], result);
 
-                curr_in += sizeof(v);
-                curr_out += sizeof(v);
-                x--;
+                done += sizeof(v);
         }
 
-        return (curr_in - in);
+        return done;
 }
 
 /*
@@ -344,19 +340,17 @@ PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
         const v low_vector = replicate_v128_v(low_vector128),
                 high_vector = replicate_v128_v(high_vector128);
 
-        const uint8_t *curr_in = in;
-        uint8_t *curr_out = out;
-
         v in_x,
           high_input,
           low_input,
           mul_low_part,
           mul_high_part,
           result;
-        size_t x = len / sizeof(v);
+        size_t x = 0,
+               done = 0;
 
-        while(x > 0) {
-                in_x = loadu_v(curr_in);
+        for(x = 0; x < len / sizeof(v); x++) {
+                in_x = loadu_v(&in[done]);
 
                 low_input = and_v(in_x, low_mask_unpacked);
                 high_input = and_v(
@@ -367,15 +361,13 @@ PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
                 mul_high_part = shuffle_epi8_v(high_vector, high_input);
 
                 result = xor_v(
-                                loadu_v(curr_out),
+                                loadu_v(&out[done]),
                                 xor_v(mul_low_part, mul_high_part));
 
-                storeu_v(curr_out, result);
+                storeu_v(&out[done], result);
 
-                curr_in += sizeof(v);
-                curr_out += sizeof(v);
-                x--;
+                done += sizeof(v);
         }
 
-        return (curr_in - in);
+        return done;
 }
