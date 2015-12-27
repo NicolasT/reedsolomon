@@ -13,7 +13,7 @@ import System.FilePath
 import Distribution.PackageDescription
 import Distribution.Simple
 import Distribution.Simple.LocalBuildInfo
-import Distribution.Simple.Program.Builtin (arProgram)
+import Distribution.Simple.Program.Builtin (arProgram, ghcProgram)
 import qualified Distribution.Simple.Program.Db as Db
 import Distribution.Simple.Program.Types (ConfiguredProgram(..), Program(..), ProgramLocation(..))
 import Distribution.Simple.Setup
@@ -38,19 +38,33 @@ customConfHook innerHook a b = do
     root <- makeAbsolute =<< getCurrentDirectory
 
     let cabalBuildDir = buildDir localBuildInfo
-        Just ar = Db.lookupProgram arProgram (withPrograms localBuildInfo)
-        arLocation = case programLocation ar of
-                        UserSpecified path -> path
-                        FoundOnSystem path -> path
-        arWrapperPath = root </> "build-tools" </> "ar-wrapper"
         sh = "sh"
+
+        Just ar = Db.lookupProgram arProgram (withPrograms localBuildInfo)
+        arLocation = resolveProgramLocation ar
+        arWrapperPath = root </> "build-tools" </> "ar-wrapper"
         arWrapper = ar { programDefaultArgs = arWrapperPath : arLocation : programDefaultArgs ar
                        , programLocation = UserSpecified sh
                        , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ar
                        }
-        withPrograms' = Db.updateProgram arWrapper $ withPrograms localBuildInfo
+
+        Just ghc = Db.lookupProgram ghcProgram (withPrograms localBuildInfo)
+        ghcLocation = resolveProgramLocation ghc
+        ghcWrapperPath = root </> "build-tools" </> "ghc-wrapper"
+        ghcWrapper = ghc { programDefaultArgs = ghcWrapperPath : ghcLocation : programDefaultArgs ghc
+                         , programLocation = UserSpecified sh
+                         , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ghc
+                         }
+
+        withPrograms' = Db.updateProgram arWrapper $
+                            Db.updateProgram ghcWrapper $
+                            withPrograms localBuildInfo
 
     return localBuildInfo { withPrograms = withPrograms' }
+  where
+    resolveProgramLocation prog = case programLocation prog of
+                                    UserSpecified path -> path
+                                    FoundOnSystem path -> path
 
 customBuildHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> BuildFlags -> IO ())
                 -> PackageDescription

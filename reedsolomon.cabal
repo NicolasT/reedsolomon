@@ -19,6 +19,7 @@ Extra-Source-Files:  README.md
                    , stack.yaml
 
                    , build-tools/ar-wrapper
+                   , build-tools/ghc-wrapper
 
                    , cbits/configure.ac
                    , cbits/Makefile.am
