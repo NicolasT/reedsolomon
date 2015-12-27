@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <immintrin.h>
 
+#include "config.h"
 #include "reedsolomon.h"
 
 #if HAVE_FUNC_ATTRIBUTE_HOT

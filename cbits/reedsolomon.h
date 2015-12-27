@@ -1,6 +1,8 @@
 #include <unistd.h>
 #include <stdint.h>
 
+#include "config.h"
+
 #define PROTO_RETURN size_t
 #define PROTO_ARGS                              \
         const uint8_t low[16],                  \
