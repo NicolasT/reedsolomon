@@ -251,48 +251,7 @@ loopback_xor:
     JNZ     loopback_xor
 done_xor:
     RET
-*/
 
-#ifdef HOT
-HOT_FUNCTION
-#endif
-PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
-        const v low_mask_unpacked = set1_epi8_v(0x0f);
-
-        const v128 low_vector128 = loadu_v128(low),
-                   high_vector128 = loadu_v128(high);
-        const v low_vector = replicate_v128_v(low_vector128),
-                high_vector = replicate_v128_v(high_vector128);
-
-        v in_x,
-          high_input,
-          low_input,
-          mul_low_part,
-          mul_high_part,
-          result;
-        size_t x = 0,
-               done = 0;
-
-        for(x = 0; x < len / sizeof(v); x++) {
-                in_x = loadu_v(&in[done]);
-
-                low_input = and_v(in_x, low_mask_unpacked);
-                high_input = and_v(srli_epi64_v(in_x, 4), low_mask_unpacked);
-
-                mul_low_part = shuffle_epi8_v(low_vector, low_input);
-                mul_high_part = shuffle_epi8_v(high_vector, high_input);
-
-                result = xor_v(mul_low_part, mul_high_part);
-
-                storeu_v(&out[done], result);
-
-                done += sizeof(v);
-        }
-
-        return done;
-}
-
-/*
 // func galMulSSSE3(low, high, in, out []byte)
 TEXT ·galMulSSSE3(SB), 7, $0
     MOVQ    low+0(FP),SI        // SI: &low
@@ -329,10 +288,9 @@ done:
     RET
 */
 
-#ifdef HOT
-HOT_FUNCTION
-#endif
-PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
+static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
+        PROTO_ARGS,
+        v (*modifier)(const v new, const v old)) {
         const v low_mask_unpacked = set1_epi8_v(0x0f);
 
         const v128 low_vector128 = loadu_v128(low),
@@ -340,29 +298,21 @@ PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
         const v low_vector = replicate_v128_v(low_vector128),
                 high_vector = replicate_v128_v(high_vector128);
 
-        v in_x,
-          high_input,
-          low_input,
-          mul_low_part,
-          mul_high_part,
-          result;
-        size_t x = 0,
-               done = 0;
+        size_t done = 0;
 
-        for(x = 0; x < len / sizeof(v); x++) {
-                in_x = loadu_v(&in[done]);
+        for(size_t x = 0; x < len / sizeof(v); x++) {
+                const v in_x = loadu_v(&in[done]),
 
-                low_input = and_v(in_x, low_mask_unpacked);
-                high_input = and_v(
-                                srli_epi64_v(in_x, 4),
-                                low_mask_unpacked);
+                        low_input = and_v(in_x, low_mask_unpacked),
+                        in_x_shifted = srli_epi64_v(in_x, 4),
+                        high_input = and_v(in_x_shifted, low_mask_unpacked),
 
-                mul_low_part = shuffle_epi8_v(low_vector, low_input);
-                mul_high_part = shuffle_epi8_v(high_vector, high_input);
+                        mul_low_part = shuffle_epi8_v(low_vector, low_input),
+                        mul_high_part = shuffle_epi8_v(high_vector, high_input),
 
-                result = xor_v(
-                                loadu_v(&out[done]),
-                                xor_v(mul_low_part, mul_high_part));
+                        new = xor_v(mul_low_part, mul_high_part),
+                        old = loadu_v(&out[done]),
+                        result = modifier(new, old);
 
                 storeu_v(&out[done], result);
 
@@ -370,4 +320,22 @@ PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
         }
 
         return done;
+}
+
+static ALWAYS_INLINE CONST_FUNCTION v noop(const v new, const v old __attribute__((__unused__))) {
+        return new;
+}
+
+#ifdef HOT
+HOT_FUNCTION
+#endif
+PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
+        return reedsolomon_gal_mul_impl(low, high, in, out, len, noop);
+}
+
+#ifdef HOT
+HOT_FUNCTION
+#endif
+PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
+        return reedsolomon_gal_mul_impl(low, high, in, out, len, xor_v);
 }
