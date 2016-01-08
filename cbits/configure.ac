@@ -30,6 +30,7 @@ AX_APPEND_COMPILE_FLAGS([-std=c99])
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AX_APPEND_COMPILE_FLAGS([-Wall -Wextra])
 AX_APPEND_COMPILE_FLAGS([-O3])
+AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all -funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
 AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches -grecord-gcc-switches])
 
 # Check CC has AVX2 support
