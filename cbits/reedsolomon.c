@@ -37,12 +37,12 @@
  */
 #if !defined(__clang__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6))
 # warning You have an old C compiler that generates incorrect SIMD allocation code. Using slow work-around.
-# define STACK_ALIGN(t, n)                                                              \
-        char _tmp ##n [2 * sizeof(t)];                                                  \
-        t *n = (t *)(((uintptr_t)&_tmp ##n + (sizeof(t) - 1)) & ~(uintptr_t)0x0F)
+# define STACK_ALIGN(t, n)                                                                      \
+        char _tmp ##n [2 * sizeof(t)];                                                          \
+        t *n = (t *)(((uintptr_t)&_tmp ##n + (sizeof(t) - 1)) & ~(uintptr_t)(sizeof(t) - 1))
 #else
-# define STACK_ALIGN(t, n)                                                              \
-        t n_tmp;                                                                        \
+# define STACK_ALIGN(t, n)                                                                      \
+        t n_tmp;                                                                                \
         t *n = &n_tmp
 #endif
 
