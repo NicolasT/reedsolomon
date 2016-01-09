@@ -86,7 +86,7 @@ static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
         STACK_ALIGN(v, result);
 
 #if defined(__AVX2__)
-        *result = _mm256_loadu_si256((const v *)in);
+        *result = _mm256_loadu_si256((const __m256i *)in);
 #else
         *result = loadu_v128(in);
 #endif
