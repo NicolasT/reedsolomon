@@ -80,10 +80,16 @@ AC_TYPE_UINT64_T
 
 # Checks for library functions.
 
+# Work-around compiler emitting warnings for unrecognized flags added to CFLAGS
+# before, which causes the attribute checks to fail.
+rs_gcc_func_attribute_save_flags=$[]_AC_LANG_PREFIX[]FLAGS
+_AC_LANG_PREFIX[]FLAGS=""
 AX_GCC_FUNC_ATTRIBUTE([always_inline])
 AX_GCC_FUNC_ATTRIBUTE([const])
 AX_GCC_FUNC_ATTRIBUTE([hot])
 AX_GCC_FUNC_ATTRIBUTE([ifunc])
+AX_GCC_FUNC_ATTRIBUTE([force_align_arg_pointer])
+_AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
