@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 #include <immintrin.h>
 
 #include "config.h"
@@ -75,9 +76,7 @@ static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
 #if defined(__SSE2__)
         result->m128i = _mm_loadu_si128((const __m128i *)in);
 #else
-        const uint64_t *in64 = (const uint64_t *)in;
-        result->u64[0] = in64[0];
-        result->u64[1] = in64[1];
+        memcpy(&result->u64, in, sizeof(result->u64));
 #endif
 
         return *result;
@@ -191,10 +190,7 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
 #elif defined(__SSE2__)
         _mm_storeu_si128((__m128i *)out, vec.m128i);
 #else
-        uint64_t *out64 = (uint64_t *)out;
-
-        out64[0] = vec.u64[0];
-        out64[1] = vec.u64[1];
+        memcpy(out, &vec.u64, sizeof(vec.u64));
 #endif
 }
 
