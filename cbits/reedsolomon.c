@@ -284,6 +284,28 @@ done:
     RET
 */
 
+static ALWAYS_INLINE v reedsolomon_gal_mul_v(
+        const v low_mask_unpacked,
+        const v low_vector,
+        const v high_vector,
+
+        v (*modifier)(const v new, const v old),
+
+        const v in_x,
+        const v old) {
+        const v low_input = and_v(in_x, low_mask_unpacked),
+                in_x_shifted = srli_epi64_v(in_x, 4),
+                high_input = and_v(in_x_shifted, low_mask_unpacked),
+
+                mul_low_part = shuffle_epi8_v(low_vector, low_input),
+                mul_high_part = shuffle_epi8_v(high_vector, high_input),
+
+                new = xor_v(mul_low_part, mul_high_part),
+                result = modifier(new, old);
+
+        return result;
+}
+
 static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
         PROTO_ARGS,
         v (*modifier)(const v new, const v old)) {
@@ -298,17 +320,13 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
 
         for(size_t x = 0; x < len / sizeof(v); x++) {
                 const v in_x = loadu_v(&in[done]),
-
-                        low_input = and_v(in_x, low_mask_unpacked),
-                        in_x_shifted = srli_epi64_v(in_x, 4),
-                        high_input = and_v(in_x_shifted, low_mask_unpacked),
-
-                        mul_low_part = shuffle_epi8_v(low_vector, low_input),
-                        mul_high_part = shuffle_epi8_v(high_vector, high_input),
-
-                        new = xor_v(mul_low_part, mul_high_part),
                         old = loadu_v(&out[done]),
-                        result = modifier(new, old);
+                        result = reedsolomon_gal_mul_v(
+                                        low_mask_unpacked,
+                                        low_vector, high_vector,
+                                        modifier,
+                                        in_x,
+                                        old);
 
                 storeu_v(&out[done], result);
 
