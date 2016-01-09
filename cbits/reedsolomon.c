@@ -23,29 +23,14 @@
 # define ALWAYS_INLINE  inline
 #endif
 
+#if HAVE_FUNC_ATTRIBUTE_FORCE_ALIGN_ARG_POINTER
+# define FORCE_ALIGN_ARG_POINTER __attribute__((force_align_arg_pointer))
+#else
+# define FORCE_ALIGN_ARG_POINTER
+#endif
+
 #define CONCAT_HELPER(a, b)     a ## b
 #define CONCAT(a, b)            CONCAT_HELPER(a, b)
-
-/* Work-around GCC not doing correct stack alignment when needed, which causes
- * crashes of the SSE2 (and most likely others, when stars are not aligned)
- * implementation on Windows when calling `set1_epi8_v`: when storing the
- * result, the target memory is not 16-byte aligned, causing a GPF/segfault.
- *
- * References:
- * - http://www.peterstock.co.uk/games/mingw_sse/
- * - http://eigen.tuxfamily.org/dox/group__TopicWrongStackAlignment.html
- * - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
- */
-#if !defined(__clang__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6))
-# warning You have an old C compiler that generates incorrect SIMD allocation code. Using slow work-around.
-# define STACK_ALIGN(t, n)                                                                      \
-        char _tmp ##n [2 * sizeof(t)];                                                          \
-        t *n = (t *)(((uintptr_t)&_tmp ##n + (sizeof(t) - 1)) & ~(uintptr_t)(sizeof(t) - 1))
-#else
-# define STACK_ALIGN(t, n)                                                                      \
-        t n_tmp;                                                                                \
-        t *n = &n_tmp
-#endif
 
 typedef uint8_t v16u8v __attribute__((vector_size(16)));
 typedef uint64_t v2u64v __attribute__((vector_size(16)));
@@ -71,36 +56,31 @@ typedef v128 v;
 #endif
 
 static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
-        STACK_ALIGN(v128, result);
-
 #if defined(__SSE2__)
-        result->m128i = _mm_loadu_si128((const __m128i *)in);
+        const v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
 #else
-        memcpy(&result->u64, in, sizeof(result->u64));
+        v128 result;
+        memcpy(&result.u64, in, sizeof(result.u64));
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
-        STACK_ALIGN(v, result);
-
 #if defined(__AVX2__)
-        *result = _mm256_loadu_si256((const __m256i *)in);
+        const v result = _mm256_loadu_si256((const __m256i *)in);
 #else
-        *result = loadu_v128(in);
+        const v result = loadu_v128(in);
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
-        STACK_ALIGN(v, result);
-
 #if defined(__AVX2__)
-        *result = _mm256_set1_epi8(c);
+        const v result = _mm256_set1_epi8(c);
 #elif defined(__SSE2__)
-        result->m128i = _mm_set1_epi8(c);
+        const v result = { .m128i = _mm_set1_epi8(c) };
 #else
         uint64_t c2 = c,
                  tmp = (c2 << (7 * 8)) |
@@ -111,69 +91,59 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
                        (c2 << (2 * 8)) |
                        (c2 << (1 * 8)) |
                        (c2 << (0 * 8));
-        result->u64[0] = tmp;
-        result->u64[1] = tmp;
+        const v result = { .u64 = { tmp, tmp } };
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned int n) {
-        STACK_ALIGN(v, result);
-
 #if defined(__AVX2__)
-        *result = _mm256_srli_epi64(in, n);
+        const v result = _mm256_srli_epi64(in, n);
 #elif defined(__SSE2__)
-        result->m128i = _mm_srli_epi64(in.m128i, n);
+        const v result = { .m128i = _mm_srli_epi64(in.m128i, n) };
 #else
-        result->u64[0] = in.u64[0] >> n;
-        result->u64[1] = in.u64[1] >> n;
+        const v result = { .u64 = { in.u64[0] >> n,
+                                    in.u64[1] >> n } };
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
-        STACK_ALIGN(v, result);
-
 #if defined(__AVX2__)
-        *result = _mm256_and_si256(a, b);
+        const v result = _mm256_and_si256(a, b);
 #elif defined(__SSE2__)
-        result->m128i = _mm_and_si128(a.m128i, b.m128i);
+        const v result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
 #else
-        result->v2u64 = a.v2u64 & b.v2u64;
+        const v result = { .v2u64 = a.v2u64 & b.v2u64 };
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
-        STACK_ALIGN(v, result);
-
 #if defined(__AVX2__)
-        *result = _mm256_xor_si256(a, b);
+        const v result = _mm256_xor_si256(a, b);
 #elif defined(__SSE2__)
-        result->m128i = _mm_xor_si128(a.m128i, b.m128i);
+        const v result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
 #else
-        result->v2u64 = a.v2u64 ^ b.v2u64;
+        const v result = { .v2u64 = a.v2u64 ^ b.v2u64 };
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) {
-        STACK_ALIGN(v, result);
-
 #if defined(__AVX2__)
-        *result = _mm256_shuffle_epi8(vec, mask);
+        const v result = _mm256_shuffle_epi8(vec, mask);
 #elif defined(__SSSE3__)
-        result->m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i);
+        const v result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
 #else
-        result->u64[0] = 0;
-        result->u64[1] = 0;
+        v result = { .u64 = { 0, 0 } };
 
 # define DO_BYTE(i) \
-        result->u8[i] = mask.u8[i] & 0x80 ? 0 : vec.u8[mask.u8[i] & 0x0F];
+        result.u8[i] = mask.u8[i] & 0x80 ? 0 : vec.u8[mask.u8[i] & 0x0F];
 
         DO_BYTE( 0); DO_BYTE( 1); DO_BYTE( 2); DO_BYTE( 3);
         DO_BYTE( 4); DO_BYTE( 5); DO_BYTE( 6); DO_BYTE( 7);
@@ -181,7 +151,7 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
         DO_BYTE(12); DO_BYTE(13); DO_BYTE(14); DO_BYTE(15);
 #endif
 
-        return *result;
+        return result;
 }
 
 static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
@@ -343,13 +313,13 @@ static ALWAYS_INLINE CONST_FUNCTION v noop(const v new, const v old __attribute_
 #ifdef HOT
 HOT_FUNCTION
 #endif
-PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
+FORCE_ALIGN_ARG_POINTER PROTO(CONCAT(reedsolomon_gal_mul_, TARGET)) {
         return reedsolomon_gal_mul_impl(low, high, in, out, len, noop);
 }
 
 #ifdef HOT
 HOT_FUNCTION
 #endif
-PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
+FORCE_ALIGN_ARG_POINTER PROTO(CONCAT(reedsolomon_gal_mul_xor_, TARGET)) {
         return reedsolomon_gal_mul_impl(low, high, in, out, len, xor_v);
 }
