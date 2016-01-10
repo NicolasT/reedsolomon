@@ -288,6 +288,9 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
 
         size_t done = 0;
 
+#ifdef __clang__
+# pragma clang loop unroll(enable)
+#endif
         for(size_t x = 0; x < len / sizeof(v); x++) {
                 const v in_x = loadu_v(&in[done]),
                         old = loadu_v(&out[done]),
