@@ -80,6 +80,18 @@ static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
         return result;
 }
 
+static ALWAYS_INLINE v load_v(const uint8_t *in) {
+#if defined(__AVX2__)
+        const v256 result = { .m256i = _mm256_load_si256((const __m256i *)in) };
+#elif defined(__SSE2__)
+        const v128 result = { .m128i = _mm_load_si128((const __m128i *)in) };
+#else
+        const v128 result = loadu_v128(in);
+#endif
+
+        return result;
+}
+
 static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
 #if defined(__AVX2__)
         const v256 result = { .m256i = _mm256_set1_epi8(c) };
@@ -165,6 +177,16 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
         _mm_storeu_si128((__m128i *)out, vec.m128i);
 #else
         memcpy(out, &vec.u64, sizeof(vec.u64));
+#endif
+}
+
+static ALWAYS_INLINE void store_v(uint8_t *out, const v vec) {
+#if defined(__AVX2__)
+        _mm256_store_si256((__m256i *)out, vec.m256i);
+#elif defined(__SSE2__)
+        _mm_store_si128((__m128i *)out, vec.m128i);
+#else
+        storeu_v(out, vec);
 #endif
 }
 
@@ -294,12 +316,22 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
 
         size_t done = 0;
 
+#ifndef __AVX2__
+        /* Assume in and out are 16-byte aligned */
+# define LOAD(addr) load_v(addr)
+# define STORE(addr, vec) store_v(addr, vec)
+#else
+        /* Not necessarily 32-byte aligned... Use unaligned access ops */
+# define LOAD(addr) loadu_v(addr)
+# define STORE(addr, vec) storeu_v(addr, vec)
+#endif
+
 #ifdef __clang__
 # pragma clang loop unroll(enable)
 #endif
         for(size_t x = 0; x < len / sizeof(v); x++) {
-                const v in_x = loadu_v(&in[done]),
-                        old = loadu_v(&out[done]),
+                const v in_x = LOAD(&in[done]),
+                        old = LOAD(&out[done]),
                         result = reedsolomon_gal_mul_v(
                                         low_mask_unpacked,
                                         low_vector, high_vector,
@@ -307,7 +339,7 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
                                         in_x,
                                         old);
 
-                storeu_v(&out[done], result);
+                STORE(&out[done], result);
 
                 done += sizeof(v);
         }
