@@ -50,7 +50,11 @@ typedef union {
 # undef T1
 
 #ifdef __AVX2__
-typedef __m256i v;
+typedef union {
+        __m256i m256i;
+} v256 __attribute__((aligned(32)));
+
+typedef v256 v;
 #else
 typedef v128 v;
 #endif
@@ -68,9 +72,9 @@ static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
 
 static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
 #if defined(__AVX2__)
-        const v result = _mm256_loadu_si256((const __m256i *)in);
+        const v256 result = { .m256i = _mm256_loadu_si256((const __m256i *)in) };
 #else
-        const v result = loadu_v128(in);
+        const v128 result = loadu_v128(in);
 #endif
 
         return result;
@@ -78,9 +82,9 @@ static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
 
 static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
 #if defined(__AVX2__)
-        const v result = _mm256_set1_epi8(c);
+        const v256 result = { .m256i = _mm256_set1_epi8(c) };
 #elif defined(__SSE2__)
-        const v result = { .m128i = _mm_set1_epi8(c) };
+        const v128 result = { .m128i = _mm_set1_epi8(c) };
 #else
         uint64_t c2 = c,
                  tmp = (c2 << (7 * 8)) |
@@ -91,7 +95,7 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
                        (c2 << (2 * 8)) |
                        (c2 << (1 * 8)) |
                        (c2 << (0 * 8));
-        const v result = { .u64 = { tmp, tmp } };
+        const v128 result = { .u64 = { tmp, tmp } };
 #endif
 
         return result;
@@ -99,12 +103,12 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
 
 static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned int n) {
 #if defined(__AVX2__)
-        const v result = _mm256_srli_epi64(in, n);
+        const v256 result = { .m256i = _mm256_srli_epi64(in.m256i, n) };
 #elif defined(__SSE2__)
-        const v result = { .m128i = _mm_srli_epi64(in.m128i, n) };
+        const v128 result = { .m128i = _mm_srli_epi64(in.m128i, n) };
 #else
-        const v result = { .u64 = { in.u64[0] >> n,
-                                    in.u64[1] >> n } };
+        const v128 result = { .u64 = { in.u64[0] >> n,
+                                       in.u64[1] >> n } };
 #endif
 
         return result;
@@ -112,11 +116,11 @@ static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned in
 
 static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
 #if defined(__AVX2__)
-        const v result = _mm256_and_si256(a, b);
+        const v256 result = { .m256i = _mm256_and_si256(a.m256i, b.m256i) };
 #elif defined(__SSE2__)
-        const v result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
+        const v128 result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
 #else
-        const v result = { .v2u64 = a.v2u64 & b.v2u64 };
+        const v128 result = { .v2u64 = a.v2u64 & b.v2u64 };
 #endif
 
         return result;
@@ -124,11 +128,11 @@ static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
 
 static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
 #if defined(__AVX2__)
-        const v result = _mm256_xor_si256(a, b);
+        const v256 result = { .m256i = _mm256_xor_si256(a.m256i, b.m256i) };
 #elif defined(__SSE2__)
-        const v result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
+        const v128 result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
 #else
-        const v result = { .v2u64 = a.v2u64 ^ b.v2u64 };
+        const v128 result = { .v2u64 = a.v2u64 ^ b.v2u64 };
 #endif
 
         return result;
@@ -136,11 +140,11 @@ static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
 
 static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) {
 #if defined(__AVX2__)
-        const v result = _mm256_shuffle_epi8(vec, mask);
+        const v256 result = { .m256i = _mm256_shuffle_epi8(vec.m256i, mask.m256i) };
 #elif defined(__SSSE3__)
-        const v result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
+        const v128 result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
 #else
-        v result = { .u64 = { 0, 0 } };
+        v128 result = { .u64 = { 0, 0 } };
 
 # define DO_BYTE(i) \
         result.u8[i] = mask.u8[i] & 0x80 ? 0 : vec.u8[mask.u8[i] & 0x0F];
@@ -156,7 +160,7 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
 
 static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
 #if defined(__AVX2__)
-        _mm256_storeu_si256((__m256i *)out, vec);
+        _mm256_storeu_si256((__m256i *)out, vec.m256i);
 #elif defined(__SSE2__)
         _mm_storeu_si128((__m128i *)out, vec.m128i);
 #else
@@ -166,10 +170,12 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
 
 static ALWAYS_INLINE CONST_FUNCTION v replicate_v128_v(const v128 vec) {
 #if defined(__AVX2__)
-        return _mm256_broadcastsi128_si256(vec.m128i);
+        const v256 result = { .m256i = _mm256_broadcastsi128_si256(vec.m128i) };
 #else
-        return vec;
+        const v128 result = vec;
 #endif
+
+        return result;
 }
 
 
