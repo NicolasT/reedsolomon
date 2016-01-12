@@ -57,9 +57,15 @@ main = do
 #if RS_HAVE_AVX2
           , dependOn AVX2 $ bench "AVX2" $ whnf (benchRGM c_reedsolomon_gal_mul_avx2) v1048576
 #endif
+#if RS_HAVE_AVX
           , dependOn AVX $ bench "AVX" $ whnf (benchRGM c_reedsolomon_gal_mul_avx) v1048576
+#endif
+#if RS_HAVE_SSSE3
           , dependOn SSSE3 $ bench "SSSE3" $ whnf (benchRGM c_reedsolomon_gal_mul_ssse3) v1048576
+#endif
+#if RS_HAVE_SSE2
           , dependOn SSE2 $ bench "SSE2" $ whnf (benchRGM c_reedsolomon_gal_mul_sse2) v1048576
+#endif
           , Just $ bench "Generic" $ whnf (benchRGM c_reedsolomon_gal_mul_generic) v1048576
           ]
       , bgroup "memcpy" [
@@ -102,9 +108,15 @@ foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProt
 #if RS_HAVE_AVX2
 foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_reedsolomon_gal_mul_avx2 :: CProto
 #endif
+#if RS_HAVE_AVX
 foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_reedsolomon_gal_mul_avx :: CProto
+#endif
+#if RS_HAVE_SSSE3
 foreign import ccall unsafe "reedsolomon_gal_mul_ssse3" c_reedsolomon_gal_mul_ssse3 :: CProto
+#endif
+#if RS_HAVE_SSE2
 foreign import ccall unsafe "reedsolomon_gal_mul_sse2" c_reedsolomon_gal_mul_sse2 :: CProto
+#endif
 foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_reedsolomon_gal_mul_generic :: CProto
 
 foreign import ccall unsafe "memcpy" c_memcpy :: Ptr a -> Ptr a -> CSize -> IO ()

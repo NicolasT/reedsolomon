@@ -1,8 +1,21 @@
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdint.h>
 #include <string.h>
-#include <immintrin.h>
 
-#include "config.h"
+/* These are in 'reverse' order for good reason: 'elif' wouldn't work */
+#if defined(__AVX2__) && HAVE_IMMINTRIN_H
+# include <immintrin.h>
+#elif defined(__AVX__) && HAVE_IMMINTRIN_H
+# include <immintrin.h>
+#elif defined(__SSSE3__) && HAVE_TMMINTRIN_H
+# include <tmmintrin.h>
+#elif defined(__SSE2__) && HAVE_EMMINTRIN_H
+# include <emmintrin.h>
+#endif
+
 #include "reedsolomon.h"
 
 #if HAVE_FUNC_ATTRIBUTE_HOT

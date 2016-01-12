@@ -1,14 +1,21 @@
-#include <stddef.h>
-#include <cpuid.h>
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include "config.h"
+#include <stddef.h>
+#if HAVE_CPUID_H
+# include <cpuid.h>
+#endif
+
 #include "reedsolomon.h"
+
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+
+#if HAVE_CPUID_H
 
 #ifndef bit_AVX2
 # define bit_AVX2       (1 << 5)
 #endif
-
-#define unlikely(x)     __builtin_expect(!!(x), 0)
 
 #define LOG(s)                          \
         do {                            \
@@ -65,16 +72,25 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
 #else
                 if(1) {
 #endif
+#if RS_HAVE_AVX
                         if((cpuid1.ecx & bit_AVX) != 0) {
                                 result = REEDSOLOMON_CPU_AVX;
                         }
-                        else if((cpuid1.ecx & bit_SSSE3) != 0) {
+                        else
+#endif
+#if RS_HAVE_SSSE3
+                        if((cpuid1.ecx & bit_SSSE3) != 0) {
                                 result = REEDSOLOMON_CPU_SSSE3;
                         }
-                        else if((cpuid1.edx & bit_SSE2) != 0) {
+                        else
+#endif
+#if RS_HAVE_SSE2
+                        if((cpuid1.edx & bit_SSE2) != 0) {
                                 result = REEDSOLOMON_CPU_SSE2;
                         }
-                        else {
+                        else
+#endif
+                        {
                                 result = REEDSOLOMON_CPU_GENERIC;
                         }
                 }
@@ -89,6 +105,24 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
                 result = n ## _ ## lower;                       \
         } break
 
+#if RS_HAVE_SSE2
+# define MAYBE_SSE2(n) \
+        CASE(n, sse2, SSE2)
+#else
+# define MAYBE_SSE2(n)
+#endif
+#if RS_HAVE_SSSE3
+# define MAYBE_SSSE3(n) \
+        CASE(n, ssse3, SSSE3)
+#else
+# define MAYBE_SSSE3(n)
+#endif
+#if RS_HAVE_AVX
+# define MAYBE_AVX(n) \
+        CASE(n, avx, AVX)
+#else
+# define MAYBE_AVX(n)
+#endif
 #if RS_HAVE_AVX2
 # define MAYBE_AVX2(n) \
         CASE(n, avx2, AVX2)
@@ -103,9 +137,9 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
                                                                                         \
                 switch(level) {                                                         \
                         MAYBE_AVX2(n);                                                  \
-                        CASE(n, avx, AVX);                                              \
-                        CASE(n, ssse3, SSSE3);                                          \
-                        CASE(n, sse2, SSE2);                                            \
+                        MAYBE_AVX(n);                                                   \
+                        MAYBE_SSSE3(n);                                                 \
+                        MAYBE_SSE2(n);                                                  \
                         CASE(n, generic, GENERIC);                                      \
                         default: {                                                      \
                                 LOG("reedsolomon: using " #n "_generic");               \
@@ -115,6 +149,17 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
                                                                                         \
                 return result;                                                          \
         }
+
+
+#else /* HAVE_CPUID_H */
+
+#define IFUNC(n, proto)                         \
+        static proto n ## _ifunc(void) {        \
+                return n ## _generic;           \
+        }
+
+#endif /* HAVE_CPUID_H */
+
 
 typedef PROTO_RETURN(*gal_mul_proto)(PROTO_ARGS);
 typedef PROTO_RETURN(*gal_mul_xor_proto)(PROTO_ARGS);

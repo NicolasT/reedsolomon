@@ -380,9 +380,15 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_AVX2
 > foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_rgm_avx2 :: CProto
 #endif
+#if RS_HAVE_AVX
 > foreign import ccall unsafe "reedsolomon_gal_mul_avx" c_rgm_avx :: CProto
+#endif
+#if RS_HAVE_SSSE3
 > foreign import ccall unsafe "reedsolomon_gal_mul_ssse3" c_rgm_ssse3 :: CProto
+#endif
+#if RS_HAVE_SSE2
 > foreign import ccall unsafe "reedsolomon_gal_mul_sse2" c_rgm_sse2 :: CProto
+#endif
 > foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_rgm_generic :: CProto
 #endif
 
@@ -409,13 +415,19 @@ func TestGalois(t *testing.T) {
 >                         dependOn AVX2 $ testProperty "native/avx2" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx2,
 #endif
+#if RS_HAVE_AVX
 >                         dependOn AVX $ testProperty "native/avx" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx
->                       , dependOn SSSE3 $ testProperty "native/ssse3" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_ssse3
->                       , dependOn SSE2 $ testProperty "native/sse2" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse2
->                       , Just $ testProperty "native/generic" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx,
+#endif
+#if RS_HAVE_SSSE3
+>                         dependOn SSSE3 $ testProperty "native/ssse3" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_ssse3,
+#endif
+#if RS_HAVE_SSE2
+>                         dependOn SSE2 $ testProperty "native/sse2" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse2,
+#endif
+>                         Just $ testProperty "native/generic" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_generic
 >                       ]
 >                 ]
