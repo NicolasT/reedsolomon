@@ -64,23 +64,23 @@ AC_DEFINE_UNQUOTED(
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h unistd.h])
 AC_CHECK_HEADERS([cpuid.h])
-rs_simd_headers_save_flags=$[]_AC_LANG_PREFIX[]FLAGS
+rs_simd_headers_save_flags=$CPPFLAGS
 if test x$rs_sse2 = x1; then
-    _AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS -msse2"
+    CPPFLAGS="$CPPFLAGS -msse2"
 fi
 if test x$rs_ssse3 = x1; then
-    _AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS -mssse3"
+    CPPFLAGS="$CPPFLAGS -mssse3"
 fi
 if test x$rs_avx = x1; then
-    _AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS -mavx"
+    CPPFLAGS="$CPPFLAGS -mavx"
 fi
 if test x$rs_avx2 = x1; then
-    _AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS -mavx2"
+    CPPFLAGS="$CPPFLAGS -mavx2"
 fi
 AC_CHECK_HEADERS([emmintrin.h])
 AC_CHECK_HEADERS([tmmintrin.h])
 AC_CHECK_HEADERS([immintrin.h])
-_AC_LANG_PREFIX[]FLAGS=$rs_simd_headers_save_flags
+CPPFLAGS=$rs_simd_headers_save_flags
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
