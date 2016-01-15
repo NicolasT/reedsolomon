@@ -38,6 +38,11 @@ AX_CHECK_COMPILE_FLAG([-mssse3], [rs_ssse3=1], [rs_ssse3=0])
 AX_CHECK_COMPILE_FLAG([-mavx], [rs_avx=1], [rs_avx=0])
 AX_CHECK_COMPILE_FLAG([-mavx2], [rs_avx2=1], [rs_avx2=0])
 
+AM_CONDITIONAL(RS_HAVE_GENERIC, [true])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_GENERIC],
+    [1],
+    [Define to 1 if the generic routine works])
 AM_CONDITIONAL(RS_HAVE_SSE2, [test x$rs_sse2 = x1])
 AC_DEFINE_UNQUOTED(
     [RS_HAVE_SSE2],

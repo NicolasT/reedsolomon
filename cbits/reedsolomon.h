@@ -33,8 +33,10 @@ PROTO(reedsolomon_gal_mul_xor_ssse3);
 PROTO(reedsolomon_gal_mul_sse2);
 PROTO(reedsolomon_gal_mul_xor_sse2);
 #endif
+#if RS_HAVE_GENERIC
 PROTO(reedsolomon_gal_mul_generic);
 PROTO(reedsolomon_gal_mul_xor_generic);
+#endif
 
 PROTO(reedsolomon_gal_mul);
 PROTO(reedsolomon_gal_mul_xor);

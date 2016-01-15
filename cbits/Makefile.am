@@ -9,9 +9,11 @@ noinst_LIBRARIES = libreedsolomon.a
 SIMD_SRC = reedsolomon.c \
 	   reedsolomon.h
 
+if RS_HAVE_GENERIC
 libreedsolomon_generic_a_SOURCES = $(SIMD_SRC)
 libreedsolomon_generic_a_CPPFLAGS = -DTARGET=generic
 noinst_LIBRARIES += libreedsolomon-generic.a
+endif
 
 if RS_HAVE_SSE2
 libreedsolomon_sse2_a_SOURCES = $(SIMD_SRC)

@@ -13,6 +13,10 @@
 
 #if HAVE_CPUID_H
 
+#if !RS_HAVE_GENERIC
+# error Generic routines not available on x86. This is not supported.
+#endif
+
 #ifndef bit_AVX2
 # define bit_AVX2       (1 << 5)
 #endif
@@ -152,6 +156,10 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
 
 
 #else /* HAVE_CPUID_H */
+
+#if !RS_HAVE_GENERIC
+# error Generic routines not available, and no fallback. This is not supported.
+#endif
 
 #define IFUNC(n, proto)                         \
         static proto n ## _ifunc(void) {        \
