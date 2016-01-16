@@ -16,6 +16,10 @@
 # include <emmintrin.h>
 #endif
 
+#if defined(__ARM_NEON__) && HAVE_ARM_NEON_H
+# include <arm_neon.h>
+#endif
+
 #include "reedsolomon.h"
 
 #if HAVE_FUNC_ATTRIBUTE_HOT
@@ -56,6 +60,10 @@ typedef union {
 #if __SSE2__
         T1(__m128i, m128i);
 #endif
+#if __ARM_NEON__
+        T1(uint8x16_t, uint8x16);
+        T1(uint8x8x2_t, uint8x8x2);
+#endif
         T1(v16u8v, v16u8);
         T1(v2u64v, v2u64);
 } v128 __attribute__((aligned(16)));
@@ -75,6 +83,8 @@ typedef v128 v;
 static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
 #if defined(__SSE2__)
         const v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
+#elif defined(__ARM_NEON__)
+        const v128 result = { .uint8x16 = vld1q_u8(in) };
 #else
         v128 result;
         memcpy(&result.u64, in, sizeof(result.u64));
@@ -110,6 +120,8 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
         const v256 result = { .m256i = _mm256_set1_epi8(c) };
 #elif defined(__SSE2__)
         const v128 result = { .m128i = _mm_set1_epi8(c) };
+#elif defined(__ARM_NEON__)
+        const v128 result = { .uint8x16 = vdupq_n_u8(c) };
 #else
         uint64_t c2 = c,
                  tmp = (c2 << (7 * 8)) |
@@ -131,6 +143,8 @@ static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned in
         const v256 result = { .m256i = _mm256_srli_epi64(in.m256i, n) };
 #elif defined(__SSE2__)
         const v128 result = { .m128i = _mm_srli_epi64(in.m128i, n) };
+#elif defined(__ARM_NEON__)
+        const v128 result = { .uint8x16 = vshrq_n_u8(in.uint8x16, n) };
 #else
         const v128 result = { .u64 = { in.u64[0] >> n,
                                        in.u64[1] >> n } };
@@ -144,6 +158,8 @@ static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
         const v256 result = { .m256i = _mm256_and_si256(a.m256i, b.m256i) };
 #elif defined(__SSE2__)
         const v128 result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
+#elif defined(__ARM_NEON__)
+        const v128 result = { .uint8x16 = vandq_u8(a.uint8x16, b.uint8x16) };
 #else
         const v128 result = { .v2u64 = a.v2u64 & b.v2u64 };
 #endif
@@ -156,6 +172,8 @@ static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
         const v256 result = { .m256i = _mm256_xor_si256(a.m256i, b.m256i) };
 #elif defined(__SSE2__)
         const v128 result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
+#elif defined(__ARM_NEON__)
+        const v128 result = { .uint8x16 = veorq_u8(a.uint8x16, b.uint8x16) };
 #else
         const v128 result = { .v2u64 = a.v2u64 ^ b.v2u64 };
 #endif
@@ -168,6 +186,14 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
         const v256 result = { .m256i = _mm256_shuffle_epi8(vec.m256i, mask.m256i) };
 #elif defined(__SSSE3__)
         const v128 result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
+#elif defined(__ARM_NEON__)
+        /* There's no NEON instruction mapping 1-to-1 to _mm_shuffle_epi8, but
+         * this should have the same result...
+         */
+        const v128 result = { .uint8x16 = vcombine_u8(vtbl2_u8(vec.uint8x8x2,
+                                                               vget_low_u8(mask.uint8x16)),
+                                                      vtbl2_u8(vec.uint8x8x2,
+                                                               vget_high_u8(mask.uint8x16))) };
 #else
         v128 result = { .u64 = { 0, 0 } };
 
@@ -188,6 +214,8 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
         _mm256_storeu_si256((__m256i *)out, vec.m256i);
 #elif defined(__SSE2__)
         _mm_storeu_si128((__m128i *)out, vec.m128i);
+#elif defined(__ARM_NEON__)
+        vst1q_u8(out, vec.uint8x16);
 #else
         memcpy(out, &vec.u64, sizeof(vec.u64));
 #endif
