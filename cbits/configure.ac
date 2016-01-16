@@ -15,12 +15,16 @@ AM_INIT_AUTOMAKE([1.11 foreign -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_AWK
+AC_PROG_SED
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -117,3 +121,35 @@ AC_DEFINE_UNQUOTED(
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
+
+rs_backends=""
+if test x$rs_generic = x1; then
+    rs_backends="$rs_backends, generic"
+fi
+if test x$rs_sse2 = x1; then
+    rs_backends="$rs_backends, sse2"
+fi
+if test x$rs_ssse3 = x1; then
+    rs_backends="$rs_backends, ssse3"
+fi
+if test x$rs_avx = x1; then
+    rs_backends="$rs_backends, avx"
+fi
+if test x$rs_avx2 = x1; then
+    rs_backends="$rs_backends, avx2"
+fi
+
+rs_backends=`echo $rs_backends | $SED s/^,\ //`
+
+echo ["
+----------------------------------------------------------------------
+Configure completed successfully.
+
+    Version: $PACKAGE_VERSION
+    Compiler: $CC
+
+    Host platform: $host
+    Build platform: $build
+
+    Enabled backends: $rs_backends
+"]
