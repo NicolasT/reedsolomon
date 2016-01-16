@@ -18,6 +18,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_AWK
 AC_PROG_INSTALL
@@ -26,48 +27,65 @@ AC_PROG_MAKE_SET
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_PROG_RANLIB
 
-AX_APPEND_COMPILE_FLAGS([-std=c99])
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AX_APPEND_COMPILE_FLAGS([-Wall -Wextra])
 AX_APPEND_COMPILE_FLAGS([-O3])
+AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all -funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
 AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches -grecord-gcc-switches])
 
-# Check CC has AVX2 support
-AC_MSG_CHECKING([whether C compiler supports AVX2])
-rs_avx2_save_flags=$[]_AC_LANG_PREFIX[]FLAGS
-_AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS -mavx2"
-rs_avx2=0
-AC_COMPILE_IFELSE([
-    AC_LANG_PROGRAM(
-        [[#include <immintrin.h>]],
-        [[
-            __m256i a = _mm256_set1_epi8(1),
-                    b = _mm256_set1_epi8(2),
-                    c = _mm256_shuffle_epi8(a, b);
-            (void)c;
-        ]])
-    ],
-    [
-        AC_MSG_RESULT(yes)
-        rs_avx2=1
-    ],
-    [
-        AC_MSG_RESULT(no)
-        rs_avx2=0
-    ])
-_AC_LANG_PREFIX[]FLAGS=$rs_avx2_save_flags
+AX_CHECK_COMPILE_FLAG([-msse2], [rs_sse2=1], [rs_sse2=0])
+AX_CHECK_COMPILE_FLAG([-mssse3], [rs_ssse3=1], [rs_ssse3=0])
+AX_CHECK_COMPILE_FLAG([-mavx], [rs_avx=1], [rs_avx=0])
+AX_CHECK_COMPILE_FLAG([-mavx2], [rs_avx2=1], [rs_avx2=0])
 
+AM_CONDITIONAL(RS_HAVE_GENERIC, [true])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_GENERIC],
+    [1],
+    [Define to 1 if the generic routine works])
+AM_CONDITIONAL(RS_HAVE_SSE2, [test x$rs_sse2 = x1])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_SSE2],
+    [$rs_sse2],
+    [Define to 1 if AVX2 works])
+AM_CONDITIONAL(RS_HAVE_SSSE3, [test x$rs_ssse3 = x1])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_SSSE3],
+    [$rs_ssse3],
+    [Define to 1 if SSSE3 works])
+AM_CONDITIONAL(RS_HAVE_AVX, [test x$rs_avx = x1])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_AVX],
+    [$rs_avx],
+    [Define to 1 if AVX works])
+AM_CONDITIONAL(RS_HAVE_AVX2, [test x$rs_avx2 = x1])
 AC_DEFINE_UNQUOTED(
     [RS_HAVE_AVX2],
     [$rs_avx2],
     [Define to 1 if AVX2 works])
-AM_CONDITIONAL(RS_HAVE_AVX2, [test x$rs_avx2 = x1])
 
 # Checks for libraries.
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h unistd.h])
-AC_CHECK_HEADERS([cpuid.h immintrin.h])
+AC_CHECK_HEADERS([cpuid.h])
+rs_simd_headers_save_flags=$CPPFLAGS
+if test x$rs_sse2 = x1; then
+    CPPFLAGS="$CPPFLAGS -msse2"
+fi
+if test x$rs_ssse3 = x1; then
+    CPPFLAGS="$CPPFLAGS -mssse3"
+fi
+if test x$rs_avx = x1; then
+    CPPFLAGS="$CPPFLAGS -mavx"
+fi
+if test x$rs_avx2 = x1; then
+    CPPFLAGS="$CPPFLAGS -mavx2"
+fi
+AC_CHECK_HEADERS([emmintrin.h])
+AC_CHECK_HEADERS([tmmintrin.h])
+AC_CHECK_HEADERS([immintrin.h])
+CPPFLAGS=$rs_simd_headers_save_flags
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -79,10 +97,16 @@ AC_TYPE_UINT64_T
 
 # Checks for library functions.
 
+# Work-around compiler emitting warnings for unrecognized flags added to CFLAGS
+# before, which causes the attribute checks to fail.
+rs_gcc_func_attribute_save_flags=$[]_AC_LANG_PREFIX[]FLAGS
+_AC_LANG_PREFIX[]FLAGS=""
 AX_GCC_FUNC_ATTRIBUTE([always_inline])
 AX_GCC_FUNC_ATTRIBUTE([const])
 AX_GCC_FUNC_ATTRIBUTE([hot])
 AX_GCC_FUNC_ATTRIBUTE([ifunc])
+AX_GCC_FUNC_ATTRIBUTE([force_align_arg_pointer])
+_AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
