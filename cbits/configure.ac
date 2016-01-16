@@ -38,6 +38,7 @@ AC_C_CONST
 AC_C_INLINE
 AC_C_RESTRICT
 AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
 AC_TYPE_UINT8_T
 AC_TYPE_UINT64_T
 
@@ -92,6 +93,7 @@ CPPFLAGS=$rs_simd_headers_save_flags
 AC_CHECK_HEADERS([arm_neon.h], [rs_neon=1], [rs_neon=0])
 
 # Checks for library functions.
+AC_FUNC_MALLOC
 
 # Definitions based on discovered compiler or ISA characteristics.
 if test x$rs_neon = x1; then

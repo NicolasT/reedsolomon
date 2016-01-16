@@ -48,3 +48,27 @@ libreedsolomon_neon_a_SOURCES = $(SIMD_SRC)
 libreedsolomon_neon_a_CPPFLAGS = -DTARGET=neon -DHOT
 noinst_LIBRARIES += libreedsolomon-neon.a
 endif
+
+noinst_PROGRAMS = reedsolomon-gal-mul-stdio
+reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a
+if RS_HAVE_GENERIC
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-generic.a
+endif
+if RS_HAVE_SSE2
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-sse2.a
+endif
+if RS_HAVE_SSSE3
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-ssse3.a
+endif
+if RS_HAVE_AVX
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-avx.a
+endif
+if RS_HAVE_AVX2
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-avx2.a
+endif
+if RS_HAVE_NEON
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-neon.a
+endif
+
+dist_noinst_SCRIPTS = compare-isa.sh
+EXTRA_DIST = reedsolomon-gal-mul-stdio-quickcheck.hs
