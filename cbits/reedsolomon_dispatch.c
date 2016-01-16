@@ -161,6 +161,10 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
 # error Generic routines not available, and no fallback. This is not supported.
 #endif
 
+reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
+        return REEDSOLOMON_CPU_GENERIC;
+}
+
 #define IFUNC(n, proto)                         \
         static proto n ## _ifunc(void) {        \
                 return n ## _generic;           \
