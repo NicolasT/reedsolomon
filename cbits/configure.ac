@@ -148,8 +148,15 @@ Configure completed successfully.
     Version: $PACKAGE_VERSION
     Compiler: $CC
 
-    Host platform: $host
     Build platform: $build
-
+    Host platform: $host
     Enabled backends: $rs_backends
 "]
+
+case $host_cpu in
+    i[3456]86*|x86_64*)
+        # Assume a compiler which supports AVX/AVX2 also supports SSSE3
+        if test x$rs_ssse3 = x0; then
+            echo "    WARNING: Not using Intel SSSE3, performance will be degraded."
+        fi;;
+esac
