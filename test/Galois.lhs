@@ -392,6 +392,9 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_GENERIC
 > foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_rgm_generic :: CProto
 #endif
+#if RS_HAVE_NEON
+> foreign import ccall unsafe "reedsolomon_gal_mul_neon" c_rgm_neon :: CProto
+#endif
 #endif
 
 > tests :: TestTree
@@ -432,6 +435,10 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_GENERIC
 >                         Just $ testProperty "native/generic" $
 >                             reedsolomonGalMulEquivalence c_rgm c_rgm_generic
+#endif
+#if RS_HAVE_NEON
+>                         Just $ testProperty "native/NEON" $
+>                             reedsolomonGalMulEquivalence c_rgm c_rgm_neon
 #endif
 >                       ]
 >                 ]

@@ -42,3 +42,9 @@ libreedsolomon_avx2_a_CPPFLAGS = -DTARGET=avx2 -DHOT
 libreedsolomon_avx2_a_CFLAGS = -mavx2 $(AM_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-avx2.a
 endif
+
+if RS_HAVE_NEON
+libreedsolomon_neon_a_SOURCES = $(SIMD_SRC)
+libreedsolomon_neon_a_CPPFLAGS = -DTARGET=neon -DHOT
+noinst_LIBRARIES += libreedsolomon-neon.a
+endif

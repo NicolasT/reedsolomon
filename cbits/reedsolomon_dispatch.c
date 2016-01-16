@@ -155,8 +155,18 @@ reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
         }
 
 
-#else /* HAVE_CPUID_H */
+#elif RS_HAVE_NEON /* !HAVE_CPUID_H */
 
+reedsolomon_cpu_support reedsolomon_determine_cpu_support(void) {
+        return REEDSOLOMON_CPU_NEON;
+}
+
+#define IFUNC(n, proto)                         \
+        static proto n ## _ifunc(void) {        \
+                return n ## _neon;              \
+        }
+
+#else /* !HAVE_CPUID_H && !RS_HAVE_NEON */
 #if !RS_HAVE_GENERIC
 # error Generic routines not available, and no fallback. This is not supported.
 #endif
