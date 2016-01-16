@@ -88,10 +88,11 @@ CPPFLAGS=$rs_simd_headers_save_flags
 # Checks for library functions.
 
 # Definitions based on discovered compiler or ISA characteristics.
-AM_CONDITIONAL(RS_HAVE_GENERIC, [true])
+rs_generic=1
+AM_CONDITIONAL(RS_HAVE_GENERIC, [test x$rs_generic = x1])
 AC_DEFINE_UNQUOTED(
     [RS_HAVE_GENERIC],
-    [1],
+    [$rs_generic],
     [Define to 1 if the generic routine works])
 AM_CONDITIONAL(RS_HAVE_SSE2, [test x$rs_sse2 = x1])
 AC_DEFINE_UNQUOTED(
