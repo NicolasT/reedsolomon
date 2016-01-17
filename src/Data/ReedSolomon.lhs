@@ -855,6 +855,7 @@ func (r reedSolomon) Join(dst io.Writer, shards [][]byte, outSize int) error {
 >                       | SSSE3
 >                       | AVX
 >                       | AVX2
+>                       | NEON
 >   deriving (Show, Eq, Ord, Enum, Bounded)
 >
 > -- | Retrieve the SIMD instruction set used by 'native' Galois field operations.

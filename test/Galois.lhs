@@ -392,6 +392,9 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_GENERIC
 > foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_rgm_generic :: CProto
 #endif
+#if RS_HAVE_NEON
+> foreign import ccall unsafe "reedsolomon_gal_mul_neon" c_rgm_neon :: CProto
+#endif
 #endif
 
 > tests :: TestTree
@@ -412,28 +415,32 @@ func TestGalois(t *testing.T) {
 >                 , testProperty "galMulSliceXor" galMulSliceXorProperty
 >                 ]
 >           , testGroup "cbits" [
->                   testGroup "reedsolomon_gal_mul" $ catMaybes [
+>                   testGroup "reedsolomon_gal_mul" $ catMaybes $
 #if RS_HAVE_AVX2
->                         dependOn AVX2 $ testProperty "native/avx2" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx2,
+>                       (dependOn AVX2 $ testProperty "native/avx2" $
+>                           reedsolomonGalMulEquivalence c_rgm c_rgm_avx2) :
 #endif
 #if RS_HAVE_AVX
->                         dependOn AVX $ testProperty "native/avx" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_avx,
+>                       (dependOn AVX $ testProperty "native/avx" $
+>                           reedsolomonGalMulEquivalence c_rgm c_rgm_avx) :
 #endif
 #if RS_HAVE_SSSE3
->                         dependOn SSSE3 $ testProperty "native/ssse3" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_ssse3,
+>                       (dependOn SSSE3 $ testProperty "native/ssse3" $
+>                           reedsolomonGalMulEquivalence c_rgm c_rgm_ssse3) :
 #endif
 #if RS_HAVE_SSE2
->                         dependOn SSE2 $ testProperty "native/sse2" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_sse2,
+>                       (dependOn SSE2 $ testProperty "native/sse2" $
+>                           reedsolomonGalMulEquivalence c_rgm c_rgm_sse2) :
 #endif
 #if RS_HAVE_GENERIC
->                         Just $ testProperty "native/generic" $
->                             reedsolomonGalMulEquivalence c_rgm c_rgm_generic
+>                       (Just $ testProperty "native/generic" $
+>                           reedsolomonGalMulEquivalence c_rgm c_rgm_generic) :
 #endif
->                       ]
+#if RS_HAVE_NEON
+>                       (Just $ testProperty "native/NEON" $
+>                           reedsolomonGalMulEquivalence c_rgm c_rgm_neon) :
+#endif
+>                       []
 >                 ]
 >           ]
 #endif
