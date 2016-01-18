@@ -8,13 +8,13 @@ branches:
 matrix:
   include:
     # Stackage LTS-2 uses GHC 7.8.x, which relies on LLVM 3.4
-    - env: RESOLVER=lts-2 LLVM=3.4
+    - env: RESOLVER=lts-2 LLVM_VERSION=3.4
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
-    - env: RESOLVER=lts-3 LLVM=3.5
+    - env: RESOLVER=lts-3 LLVM_VERSION=3.5
     # Stackage LTS-4 uses GHC-7.10.3 which relies on LLVM 3.5
-    - env: RESOLVER=lts-4 LLVM=3.5
+    - env: RESOLVER=lts-4 LLVM_VERSION=3.5
     # Current nightly uses GHC 7.10.x
-    - env: RESOLVER=nightly LLVM=3.5
+    - env: RESOLVER=nightly LLVM_VERSION=3.5
     - env: RESOLVER=lts-4
       os: osx
 
@@ -22,20 +22,6 @@ sudo: false
 cache:
   directories:
     - $HOME/.stack/
-
-before_install:
-  - mkdir -p ~/.local/bin/
-  - case "$TRAVIS_OS_NAME" in
-      linux)
-        travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack';
-        export GHC_OPTIONS="-pgmlo opt-$LLVM -pgmlc llc-$LLVM";
-        export LLVM_FLAG=LLVM;;
-      osx)
-        travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --strip-components=1 -C ~/.local/bin '*/stack';
-        export GHC_OPTIONS="";
-        export LLVM_FLAG=-LLVM;;
-    esac
-  - export PATH=~/.local/bin:$PATH
 
 addons:
   apt:
@@ -51,20 +37,12 @@ addons:
       - libllvm3.4
       - libllvm3.5
 
+before_install:
+  - ci/step.sh travisci before-install
+
 install:
-  - pushd cbits; autoreconf -vi; popd
-  - ./.travis_long stack --no-terminal setup --resolver=$RESOLVER
-  - ./.travis_long stack --no-terminal build --ghc-options "$GHC_OPTIONS" --test --bench --only-snapshot --resolver=$RESOLVER
+  - ci/step.sh travisci install
 
 script:
-  - echo "Running tests with SIMD support disabled"
-  - stack --no-terminal build --flag=reedsolomon:-SIMD --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --no-run-benchmarks --resolver=$RESOLVER
-  - stack --resolver=$RESOLVER clean
-  - echo "Running tests with default settings (SIMD support enabled)"
-  - stack --no-terminal build --flag=reedsolomon:$LLVM_FLAG --pedantic --ghc-options "$GHC_OPTIONS" --test --test-arguments "+RTS -N2" --bench --resolver=$RESOLVER
+  - ci/step.sh travisci script
 
-  - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 5 2 $(( 5 * 1024 * 1024 ))
-  - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 10 2 $(( 10 * 1024 * 1024 ))
-  - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 10 4 $(( 10 * 1024 * 1024 ))
-  - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 50 20 $(( 50 * 1024 * 1024 ))
-  - stack --resolver=$RESOLVER exec reedsolomon-simple-bench 10 4 $(( 160 * 1024 * 1024 ))
