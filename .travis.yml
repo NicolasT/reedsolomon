@@ -28,9 +28,8 @@ before_install:
   - case "$TRAVIS_OS_NAME" in
       linux)
         travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack';
-        export GHC_OPTIONS="-pgmc gcc-5 -pgmlo opt-$LLVM -pgmlc llc-$LLVM";
-        export LLVM_FLAG=LLVM;
-        export CC=gcc-5;;
+        export GHC_OPTIONS="-pgmlo opt-$LLVM -pgmlc llc-$LLVM";
+        export LLVM_FLAG=LLVM;;
       osx)
         travis_retry curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | tar xz --strip-components=1 -C ~/.local/bin '*/stack';
         export GHC_OPTIONS="";
@@ -51,7 +50,6 @@ addons:
       - llvm-3.5-runtime
       - libllvm3.4
       - libllvm3.5
-      - gcc-5
 
 install:
   - pushd cbits; autoreconf -vi; popd
