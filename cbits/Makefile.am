@@ -50,7 +50,8 @@ noinst_LIBRARIES += libreedsolomon-neon.a
 endif
 
 noinst_PROGRAMS = reedsolomon-gal-mul-stdio
-reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a
+reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a \
+				  $(LIBOBJS)
 if RS_HAVE_GENERIC
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-generic.a
 endif
