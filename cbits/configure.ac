@@ -58,7 +58,23 @@ _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AX_APPEND_COMPILE_FLAGS([-Wall -Wextra])
 AX_APPEND_COMPILE_FLAGS([-O3])
-AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all -funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
+dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
+dnl The error above is only triggered when the Graphite optimization is actually
+dnl used, i.e. not for the 'default' program source compiled to determine
+dnl compiler support for some flag. The snippet below should trigger it though.
+dnl See also: https://lists.debian.org/debian-gcc/2015/06/msg00164.html
+AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all], [], [], [
+    AC_LANG_PROGRAM([[
+            extern int argc;
+            extern char **argv;
+        ]], [[
+            int x = 0, result = 0;
+            for(x = 0; x < argc; x++) {
+                result |= (int)argv[x][0];
+            }
+            return result;
+        ]])])
+AX_APPEND_COMPILE_FLAGS([-funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
 AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches -grecord-gcc-switches])
 
 ## Checks for supported ISA compiler options.
