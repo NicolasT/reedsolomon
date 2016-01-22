@@ -395,6 +395,9 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_NEON
 > foreign import ccall unsafe "reedsolomon_gal_mul_neon" c_rgm_neon :: CProto
 #endif
+#if RS_HAVE_ALTIVEC
+> foreign import ccall unsafe "reedsolomon_gal_mul_altivec" c_rgm_altivec :: CProto
+#endif
 #endif
 
 > tests :: TestTree
@@ -439,6 +442,10 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_NEON
 >                       (Just $ testProperty "native/NEON" $
 >                           reedsolomonGalMulEquivalence c_rgm c_rgm_neon) :
+#endif
+#if RS_HAVE_ALTIVEC
+>                       (Just $ testProperty "native/AltiVec" $
+>                           reedsolomonGalMuulEquivalence c_rgm c_rgm_altivec) :
 #endif
 >                       []
 >                 ]

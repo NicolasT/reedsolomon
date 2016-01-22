@@ -49,6 +49,12 @@ libreedsolomon_neon_a_CPPFLAGS = -DTARGET=neon -DHOT
 noinst_LIBRARIES += libreedsolomon-neon.a
 endif
 
+if RS_HAVE_ALTIVEC
+libreedsolomon_altivec_a_SOURCES = $(SIMD_SRC)
+libreedsolomon_altivec_a_CPPFLAGS = -DTARGET=altivec -DHOT
+noinst_LIBRARIES += libreedsolomon-altivec.a
+endif
+
 noinst_PROGRAMS = reedsolomon-gal-mul-stdio
 reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a \
 				  $(LIBOBJS)
@@ -69,6 +75,9 @@ reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-avx2.a
 endif
 if RS_HAVE_NEON
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-neon.a
+endif
+if RS_HAVE_ALTIVEC
+reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-altivec.a
 endif
 
 dist_noinst_SCRIPTS = compare-isa.sh

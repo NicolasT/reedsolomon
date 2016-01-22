@@ -107,16 +107,20 @@ AC_CHECK_HEADERS([immintrin.h])
 CPPFLAGS=$rs_simd_headers_save_flags
 
 AC_CHECK_HEADERS([arm_neon.h], [rs_neon=1], [rs_neon=0])
+AC_CHECK_HEADERS([altivec.h], [rs_altivec=1], [rs_altivec=0])
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 
 # Definitions based on discovered compiler or ISA characteristics.
+rs_generic=1
 if test x$rs_neon = x1; then
     # When building with ARM NEON support, we don't build generic
     rs_generic=0
-else
-    rs_generic=1
+fi
+if test x$rs_altivec = x1; then
+    # When building with PPC AltiVec support, we don't build generic
+    rs_generic=0
 fi
 AM_CONDITIONAL(RS_HAVE_GENERIC, [test x$rs_generic = x1])
 AC_DEFINE_UNQUOTED(
@@ -148,6 +152,11 @@ AC_DEFINE_UNQUOTED(
     [RS_HAVE_NEON],
     [$rs_neon],
     [Define to 1 if NEON works])
+AM_CONDITIONAL(RS_HAVE_ALTIVEC, [test x$rs_altivec = x1])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_ALTIVEC],
+    [$rs_altivec],
+    [Define to 1 if AltiVec works])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
@@ -171,6 +180,9 @@ fi
 if test x$rs_neon = x1; then
     rs_backends="$rs_backends, neon"
 fi
+if test x$rs_altivec = x1; then
+    rs_backends="$rs_backends, altivec"
+fi
 
 rs_backends=`echo $rs_backends | $SED s/^,\ //`
 
@@ -189,11 +201,15 @@ Configure completed successfully.
 case $host_cpu in
     arm*)
         if test x$rs_neon = x0; then
-            echo "    WARNING: Not using ARM NEON, performance will be degraded."
+            echo -e "    WARNING: Not using ARM NEON, performance will be degraded.\n"
         fi;;
     i[3456]86*|x86_64*)
         # Assume a compiler which supports AVX/AVX2 also supports SSSE3
         if test x$rs_ssse3 = x0; then
-            echo "    WARNING: Not using Intel SSSE3, performance will be degraded."
+            echo -e "    WARNING: Not using Intel SSSE3, performance will be degraded.\n"
+        fi;;
+    powerpc*)
+        if test x$rs_altivec = x0; then
+            echo -e "    WARNING: Not using PowerPC AltiVec, performance will be degraded.\n"
         fi;;
 esac

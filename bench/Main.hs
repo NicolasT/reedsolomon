@@ -72,6 +72,9 @@ main = do
 #if RS_HAVE_NEON
           , Just $ bench "NEON" $ whnf (benchRGM c_reedsolomon_gal_mul_neon) v1048576
 #endif
+#if RS_HAVE_ALTIVEC
+          , Just $ bench "AltiVec" $ whnf (benchRGM c_reedsolomon_gal_mul_altivec) v1048576
+#endif
           ]
       , bgroup "memcpy" [
             bench "memcpy" $ whnf (benchRGM memcpyAsCProto) v1048576
@@ -127,6 +130,9 @@ foreign import ccall unsafe "reedsolomon_gal_mul_generic" c_reedsolomon_gal_mul_
 #endif
 #if RS_HAVE_NEON
 foreign import ccall unsafe "reedsolomon_gal_mul_neon" c_reedsolomon_gal_mul_neon :: CProto
+#endif
+#if RS_HAVE_ALTIVEC
+foreign import ccall unsafe "reedsolomon_gal_mul_altivec" c_reedsolomon_gal_mul_altivec :: CProto
 #endif
 
 foreign import ccall unsafe "memcpy" c_memcpy :: Ptr a -> Ptr a -> CSize -> IO ()
