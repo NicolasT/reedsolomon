@@ -108,6 +108,29 @@ CPPFLAGS=$rs_simd_headers_save_flags
 
 AC_CHECK_HEADERS([arm_neon.h], [rs_neon=1], [rs_neon=0])
 AC_CHECK_HEADERS([altivec.h], [rs_altivec=1], [rs_altivec=0])
+# Figure out whether we have POWER8 support
+AC_CACHE_CHECK([whether vec_vsrd works], [rs_cv_vec_vsrd_works],
+    [AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+                #include <altivec.h>
+            ]], [[
+                __vector unsigned long v0 = { 0, 1 },
+                                       v1 = { 2, 3 },
+                                       v2 = vec_vsrd(v0, v1);
+                (void)v2;
+            ]])],
+            [rs_cv_vec_vsrd_works=yes],
+            [rs_cv_vec_vsrd_works=no])])
+
+if test x$rs_cv_vec_vsrd_works = xyes; then
+    rs_have_vec_vsrd=1
+else
+    rs_have_vec_vsrd=0
+fi
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_VEC_VSRD],
+    [$rs_have_vec_vsrd],
+    [Define to 1 if vec_vsrd works])
 
 # Checks for library functions.
 AC_FUNC_MALLOC
@@ -181,7 +204,11 @@ if test x$rs_neon = x1; then
     rs_backends="$rs_backends, neon"
 fi
 if test x$rs_altivec = x1; then
-    rs_backends="$rs_backends, altivec"
+    if test x$rs_have_vec_vsrd = x1; then
+        rs_backends="$rs_backends, altivec (POWER8)"
+    else
+        rs_backends="$rs_backends, altivec"
+    fi
 fi
 
 rs_backends=`echo $rs_backends | $SED s/^,\ //`
