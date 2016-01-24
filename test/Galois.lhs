@@ -4,18 +4,18 @@
 > {-# OPTIONS_GHC -fno-warn-orphans #-}
 > module Galois (tests) where
 
-#ifdef SIMD
+#if HAVE_SIMD
 # include "config.h"
 #endif
 
 > import Prelude hiding (LT)
 >
 > import Control.Monad (foldM, void, when)
-#ifdef SIMD
+#if HAVE_SIMD
 > import Data.Maybe (catMaybes)
 #endif
 > import Data.Word (Word8)
-#ifdef SIMD
+#if HAVE_SIMD
 > import Foreign.C (CSize(..))
 > import GHC.TypeLits (KnownNat)
 > import System.IO.Unsafe (unsafePerformIO)
@@ -29,22 +29,22 @@
 >
 > import Test.Tasty (TestTree, testGroup)
 > import Test.Tasty.HUnit (Assertion, (@?=), testCase)
-#ifdef SIMD
+#if HAVE_SIMD
 > import Test.Tasty.QuickCheck (Property, (==>), testProperty)
 #endif
 >
-#ifdef SIMD
+#if HAVE_SIMD
 > import qualified Test.QuickCheck as QC
 #endif
 >
-#ifdef SIMD
+#if HAVE_SIMD
 > import qualified Data.Vector.Generic.Sized as S
 > import qualified Data.ReedSolomon as RS
 > import Data.ReedSolomon (SIMDInstructions(..))
 #endif
 > import Data.ReedSolomon.Galois
 > import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
-#ifdef SIMD
+#if HAVE_SIMD
 > import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
 #endif
 
@@ -285,26 +285,26 @@ func TestGalois(t *testing.T) {
 >     let in_ = V.fromList [0, 1, 2, 3, 4, 5, 6, 10, 50, 100, 150, 174, 201, 255, 99, 32, 67, 85]
 >     out <- MV.new (V.length in_)
 >     NoAsm.galMulSlice 25 in_ out
-#ifdef SIMD
+#if HAVE_SIMD
 >     out2 <- MV.new (V.length in_)
 >     Amd64.galMulSlice 25 in_ out2
 #endif
 >     let expect = V.fromList [0x0, 0x19, 0x32, 0x2b, 0x64, 0x7d, 0x56, 0xfa, 0xb8, 0x6d, 0xc7, 0x85, 0xc3, 0x1f, 0x22, 0x7, 0x25, 0xfe]
 >     out' :: SV.Vector Word8 <- V.freeze out
 >     out' @?= expect
-#ifdef SIMD
+#if HAVE_SIMD
 >     out2' :: SV.Vector Word8 <- V.freeze out2
 >     out2' @?= expect
 #endif
 >
 >     NoAsm.galMulSlice 177 in_ out
-#ifdef SIMD
+#if HAVE_SIMD
 >     Amd64.galMulSlice 177 in_ out2
 #endif
 >     let expect' = V.fromList [0x0, 0xb1, 0x7f, 0xce, 0xfe, 0x4f, 0x81, 0x9e, 0x3, 0x6, 0xe8, 0x75, 0xbd, 0x40, 0x36, 0xa3, 0x95, 0xcb]
 >     out'' :: SV.Vector Word8 <- V.freeze out
 >     out'' @?= expect'
-#ifdef SIMD
+#if HAVE_SIMD
 >     out2'' :: SV.Vector Word8 <- V.freeze out2
 >     out2'' @?= expect'
 #endif
@@ -313,7 +313,7 @@ func TestGalois(t *testing.T) {
 >     galExp 5 20 @?= 235
 >     galExp 13 7 @?= 43
 
-#ifdef SIMD
+#if HAVE_SIMD
 > galMulSliceProperty :: Word8 -> [Word8] -> Property
 > galMulSliceProperty c in_ = length in_ /= 0 ==>
 >     let in' = V.fromList in_ in
@@ -328,7 +328,7 @@ func TestGalois(t *testing.T) {
 >     noasm == amd64
 #endif
 
-#ifdef SIMD
+#if HAVE_SIMD
 > galMulSliceXorProperty :: Word8 -> [Word8] -> Property
 > galMulSliceXorProperty c in_ = length in_ /= 0 ==>
 >     let in' = V.fromList in_ in
@@ -344,7 +344,7 @@ func TestGalois(t *testing.T) {
 >     noasm == amd64
 #endif
 
-#ifdef SIMD
+#if HAVE_SIMD
 > instance (KnownNat n, V.Vector v a, QC.Arbitrary a) => QC.Arbitrary (S.Vector v n a) where
 >     arbitrary = S.replicateM QC.arbitrary
 >
@@ -408,7 +408,7 @@ func TestGalois(t *testing.T) {
 >           , testCase "exp" testExp
 >           , testCase "galois" testGalois
 >           ]
-#ifdef SIMD
+#if HAVE_SIMD
 >     , testGroup "Properties" [
 >             testGroup "NoAsm/Amd64" [
 >                   testProperty "galMulSlice" galMulSliceProperty
@@ -445,7 +445,7 @@ func TestGalois(t *testing.T) {
 >           ]
 #endif
 >     ]
-#if SIMD
+#if HAVE_SIMD
 >   where
 >     level = unsafePerformIO RS.simdInstructions
 >     dependOn l prop = maybe Nothing (\lvl -> if l <= lvl then Just prop else Nothing) level

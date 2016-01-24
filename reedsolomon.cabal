@@ -84,10 +84,10 @@ Library
 
   if flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
-    Cpp-Options:       -DSIMD
+    Cpp-Options:       -DHAVE_SIMD=1
   if flag(LLVM)
     Ghc-Options:       -fllvm
-    Cpp-Options:       -DLLVM
+    Cpp-Options:       -DHAVE_LLVM=1
 
 Executable reedsolomon-simple-encoder
   Hs-Source-Dirs:      examples
@@ -200,7 +200,7 @@ Test-Suite reedsolomon-test
   Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
-    CPP-Options:       -DSIMD
+    CPP-Options:       -DHAVE_SIMD=1
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
 
 Benchmark reedsolomon-bench
@@ -234,7 +234,7 @@ Benchmark reedsolomon-bench
   Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
-    CPP-Options:       -DSIMD
+    CPP-Options:       -DHAVE_SIMD=1
     Other-Modules:     Data.ReedSolomon.Galois.Amd64
 
 Source-Repository head
