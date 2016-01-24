@@ -12,12 +12,12 @@ fi
 CI_TYPE=$1
 CI_STEP=$2
 
-CI_ENV_SCRIPT=ci/$CI_TYPE/env.sh
+CI_ENV_SCRIPT=ci/$CI_TYPE/$SUITE/env.sh
 if test -f $CI_ENV_SCRIPT; then
     source $CI_ENV_SCRIPT
 fi
 
-CI_SCRIPT=ci/$CI_TYPE/$CI_STEP.sh
+CI_SCRIPT=ci/$CI_TYPE/$SUITE/$CI_STEP.sh
 
 export LOCAL_BIN=~/.local/bin
 if test -d ~/.local/bin; then

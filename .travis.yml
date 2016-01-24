@@ -8,15 +8,16 @@ branches:
 matrix:
   include:
     # Stackage LTS-2 uses GHC 7.8.x, which relies on LLVM 3.4
-    - env: RESOLVER=lts-2 LLVM_VERSION=3.4
+    - env: SUITE=build-test-bench RESOLVER=lts-2 LLVM_VERSION=3.4
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
-    - env: RESOLVER=lts-3 LLVM_VERSION=3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-3 LLVM_VERSION=3.5
     # Stackage LTS-4 uses GHC-7.10.3 which relies on LLVM 3.5
-    - env: RESOLVER=lts-4 LLVM_VERSION=3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-4 LLVM_VERSION=3.5
     # Current nightly uses GHC 7.10.x
-    - env: RESOLVER=nightly LLVM_VERSION=3.5
-    - env: RESOLVER=lts-4
+    - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-4
       os: osx
+    - env: SUITE=cbits-cross RESOLVER=lts-4
 
 sudo: false
 cache:
@@ -36,6 +37,10 @@ addons:
       - llvm-3.5-runtime
       - libllvm3.4
       - libllvm3.5
+      - qemu-user-static
+      - gcc-arm-linux-gnueabihf
+      - libc6-armhf-cross
+      - libc6-dev-armhf-cross
 
 before_install:
   - ci/step.sh travisci before-install
@@ -45,4 +50,3 @@ install:
 
 script:
   - ci/step.sh travisci script
-
