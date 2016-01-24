@@ -33,9 +33,9 @@ build $HOST_ISA '' ''
 build arm arm-linux-gnueabihf ''
 build arm-neon arm-linux-gnueabihf '-mfpu=neon'
 
-stack runhaskell reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-arm-static -L /usr/arm-linux-gnueabihf ./reedsolomon-gal-mul-stdio-arm'
-stack runhaskell reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-arm-static -L /usr/arm-linux-gnueabihf ./reedsolomon-gal-mul-stdio-arm-neon'
