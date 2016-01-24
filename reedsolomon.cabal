@@ -83,7 +83,7 @@ Library
   Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    Other-Modules:     Data.ReedSolomon.Galois.SIMD
     Cpp-Options:       -DHAVE_SIMD=1
   if flag(LLVM)
     Ghc-Options:       -fllvm
@@ -201,7 +201,7 @@ Test-Suite reedsolomon-test
 
   if flag(SIMD)
     CPP-Options:       -DHAVE_SIMD=1
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    Other-Modules:     Data.ReedSolomon.Galois.SIMD
 
 Benchmark reedsolomon-bench
   Type:                exitcode-stdio-1.0
@@ -235,7 +235,7 @@ Benchmark reedsolomon-bench
 
   if flag(SIMD)
     CPP-Options:       -DHAVE_SIMD=1
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    Other-Modules:     Data.ReedSolomon.Galois.SIMD
 
 Source-Repository head
   Type:     git

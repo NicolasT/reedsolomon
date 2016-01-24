@@ -5,7 +5,7 @@ set -ue
 set +e
 # The `tr` below turns Windows path separators into Unix ones for the `grep` to
 # succeed.
-echo $@ | tr '\\' '/' | grep "Data/ReedSolomon/Galois/Amd64\.[a-z_]*o" > /dev/null 2>&1
+echo $@ | tr '\\' '/' | grep "Data/ReedSolomon/Galois/SIMD\.[a-z_]*o" > /dev/null 2>&1
 RC=$?
 set -e
 

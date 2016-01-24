@@ -45,7 +45,7 @@
 > import Data.ReedSolomon.Galois
 > import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
 #if HAVE_SIMD
-> import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
+> import qualified Data.ReedSolomon.Galois.SIMD as SIMD
 #endif
 
 /**
@@ -287,7 +287,7 @@ func TestGalois(t *testing.T) {
 >     NoAsm.galMulSlice 25 in_ out
 #if HAVE_SIMD
 >     out2 <- MV.new (V.length in_)
->     Amd64.galMulSlice 25 in_ out2
+>     SIMD.galMulSlice 25 in_ out2
 #endif
 >     let expect = V.fromList [0x0, 0x19, 0x32, 0x2b, 0x64, 0x7d, 0x56, 0xfa, 0xb8, 0x6d, 0xc7, 0x85, 0xc3, 0x1f, 0x22, 0x7, 0x25, 0xfe]
 >     out' :: SV.Vector Word8 <- V.freeze out
@@ -299,7 +299,7 @@ func TestGalois(t *testing.T) {
 >
 >     NoAsm.galMulSlice 177 in_ out
 #if HAVE_SIMD
->     Amd64.galMulSlice 177 in_ out2
+>     SIMD.galMulSlice 177 in_ out2
 #endif
 >     let expect' = V.fromList [0x0, 0xb1, 0x7f, 0xce, 0xfe, 0x4f, 0x81, 0x9e, 0x3, 0x6, 0xe8, 0x75, 0xbd, 0x40, 0x36, 0xa3, 0x95, 0xcb]
 >     out'' :: SV.Vector Word8 <- V.freeze out
@@ -321,11 +321,11 @@ func TestGalois(t *testing.T) {
 >             out <- MV.new (V.length in')
 >             NoAsm.galMulSlice c in' out
 >             return out in
->     let amd64 = V.create $ do
+>     let simd = V.create $ do
 >             out <- MV.new (V.length in')
->             Amd64.galMulSlice c in' out
+>             SIMD.galMulSlice c in' out
 >             return out in
->     noasm == amd64
+>     noasm == simd
 #endif
 
 #if HAVE_SIMD
@@ -337,11 +337,11 @@ func TestGalois(t *testing.T) {
 >             out' <- V.thaw out
 >             NoAsm.galMulSliceXor c in' out'
 >             return out' in
->     let amd64 = V.create $ do
+>     let simd = V.create $ do
 >             out' <- V.thaw out
->             Amd64.galMulSliceXor c in' out'
+>             SIMD.galMulSliceXor c in' out'
 >             return out' in
->     noasm == amd64
+>     noasm == simd
 #endif
 
 #if HAVE_SIMD
@@ -357,8 +357,8 @@ func TestGalois(t *testing.T) {
 >         let l' = 32 * (l `div` 32)
 >         (I . SV.fromListN l') `fmap` QC.vector l'
 >
-> reedsolomonGalMulEquivalence :: Amd64.CProto
->                              -> Amd64.CProto
+> reedsolomonGalMulEquivalence :: SIMD.CProto
+>                              -> SIMD.CProto
 >                              -> S.SVector 16 Word8
 >                              -> S.SVector 16 Word8
 >                              -> Input
@@ -366,16 +366,16 @@ func TestGalois(t *testing.T) {
 > reedsolomonGalMulEquivalence f g low high in_ =
 >     run f low high in_ == run g low high in_
 >   where
->     run :: Amd64.CProto -> S.SVector 16 Word8 -> S.SVector 16 Word8 -> Input -> SV.Vector Word8
+>     run :: SIMD.CProto -> S.SVector 16 Word8 -> S.SVector 16 Word8 -> Input -> SV.Vector Word8
 >     run e l h (I i) = V.create $ do
 >         let len = V.length i
 >         r <- MV.new len
->         done <- Amd64.cProtoToPrim e l h i r
+>         done <- SIMD.cProtoToPrim e l h i r
 >         when (fromIntegral done /= len) $
 >             error "Incorrect length returned"
 >         return r
 
-> type CProto = Amd64.CProto
+> type CProto = SIMD.CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul" c_rgm :: CProto
 #if RS_HAVE_AVX2
 > foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_rgm_avx2 :: CProto
@@ -410,7 +410,7 @@ func TestGalois(t *testing.T) {
 >           ]
 #if HAVE_SIMD
 >     , testGroup "Properties" [
->             testGroup "NoAsm/Amd64" [
+>             testGroup "NoAsm/SIMD" [
 >                   testProperty "galMulSlice" galMulSliceProperty
 >                 , testProperty "galMulSliceXor" galMulSliceXorProperty
 >                 ]

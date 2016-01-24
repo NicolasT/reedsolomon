@@ -32,7 +32,7 @@ import Data.ReedSolomon (SIMDInstructions(..))
 import qualified Data.ReedSolomon as RS
 import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
 #if HAVE_SIMD
-import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
+import qualified Data.ReedSolomon.Galois.SIMD as SIMD
 #endif
 
 main :: IO ()
@@ -48,7 +48,7 @@ main = do
         bgroup "Galois/galMulSlice/1048576" [
             bench "NoAsm" $ whnf (benchGalMulSlice NoAsm.galMulSlice 177) v1048576
 #if HAVE_SIMD
-          , bench "Native" $ whnf (benchGalMulSlice Amd64.galMulSlice 177) v1048576
+          , bench "Native" $ whnf (benchGalMulSlice SIMD.galMulSlice 177) v1048576
 #endif
           ]
 #if HAVE_SIMD
@@ -89,7 +89,7 @@ main = do
         f c in_ out
         return out
 #if HAVE_SIMD
-    benchRGM :: Amd64.CProto
+    benchRGM :: SIMD.CProto
              -> SV.Vector Word8
              -> SV.Vector Word8
     benchRGM f in_ = V.create $ do
@@ -103,12 +103,12 @@ main = do
            -> SV.Vector Word8
            -> SV.MVector s Word8
            -> ST s CSize
-        f' = Amd64.cProtoToPrim f
+        f' = SIMD.cProtoToPrim f
         v16 = [0 .. 15]
 #endif
 
 #if HAVE_SIMD
-type CProto = Amd64.CProto
+type CProto = SIMD.CProto
 foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
 #if RS_HAVE_AVX2
 foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_reedsolomon_gal_mul_avx2 :: CProto

@@ -64,7 +64,7 @@
 > import Data.ReedSolomon.Matrix (Matrix)
 > import qualified Data.ReedSolomon.Matrix as Matrix
 #if HAVE_SIMD
-> import Data.ReedSolomon.Galois.Amd64 (galMulSlice, galMulSliceXor)
+> import Data.ReedSolomon.Galois.SIMD (galMulSlice, galMulSliceXor)
 #else
 > import Data.ReedSolomon.Galois.NoAsm (galMulSlice, galMulSliceXor)
 #endif
