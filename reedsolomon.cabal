@@ -61,7 +61,6 @@ Library
                      , Data.Vector.Storable.ByteString
   Other-Modules:       Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.GenTables
-                     , Data.ReedSolomon.Galois.NoAsm
                      , Data.ReedSolomon.Matrix
                      , Data.Vector.Generic.Compat
                      , Data.Vector.Generic.Exceptions
@@ -82,6 +81,8 @@ Library
     Ghc-Options:       -g
   Ghc-Prof-Options:    -fprof-auto
 
+  if !flag(SIMD)
+    Other-Modules:     Data.ReedSolomon.Galois.NoAsm
   if flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.SIMD
     Cpp-Options:       -DHAVE_SIMD=1
