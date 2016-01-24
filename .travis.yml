@@ -43,6 +43,7 @@ addons:
       - gcc-arm-linux-gnueabihf
       - libc6-armhf-cross
       - libc6-dev-armhf-cross
+      - gcc-powerpc64le-linux-gnu
 
 before_install:
   - ci/step.sh travisci before-install
