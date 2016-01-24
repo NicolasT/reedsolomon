@@ -8,14 +8,14 @@ branches:
 matrix:
   include:
     # Stackage LTS-2 uses GHC 7.8.x, which relies on LLVM 3.4
-    - env: RESOLVER=lts-2 LLVM_VERSION=3.4
+    - env: SUITE=build-test-bench RESOLVER=lts-2 LLVM_VERSION=3.4
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
-    - env: RESOLVER=lts-3 LLVM_VERSION=3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-3 LLVM_VERSION=3.5
     # Stackage LTS-4 uses GHC-7.10.3 which relies on LLVM 3.5
-    - env: RESOLVER=lts-4 LLVM_VERSION=3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-4 LLVM_VERSION=3.5
     # Current nightly uses GHC 7.10.x
-    - env: RESOLVER=nightly LLVM_VERSION=3.5
-    - env: RESOLVER=lts-4
+    - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-4
       os: osx
 
 sudo: false
@@ -45,4 +45,3 @@ install:
 
 script:
   - ci/step.sh travisci script
-
