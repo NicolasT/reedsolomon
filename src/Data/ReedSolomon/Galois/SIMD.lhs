@@ -1,5 +1,5 @@
 > {-# LANGUAGE DataKinds #-}
-> module Data.ReedSolomon.Galois.Amd64 (
+> module Data.ReedSolomon.Galois.SIMD (
 >       galMulSlice
 >     , galMulSliceXor
 >     , CProto

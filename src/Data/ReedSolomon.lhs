@@ -48,7 +48,7 @@
 > import Data.Typeable (Typeable)
 > import Data.Word
 >
-#if SIMD
+#if HAVE_SIMD
 > import Foreign.C (CInt(..))
 #endif
 >
@@ -63,8 +63,8 @@
 >
 > import Data.ReedSolomon.Matrix (Matrix)
 > import qualified Data.ReedSolomon.Matrix as Matrix
-#ifdef SIMD
-> import Data.ReedSolomon.Galois.Amd64 (galMulSlice, galMulSliceXor)
+#if HAVE_SIMD
+> import Data.ReedSolomon.Galois.SIMD (galMulSlice, galMulSliceXor)
 #else
 > import Data.ReedSolomon.Galois.NoAsm (galMulSlice, galMulSliceXor)
 #endif
@@ -865,7 +865,7 @@ func (r reedSolomon) Join(dst io.Writer, shards [][]byte, outSize int) error {
 > -- optimized Galois field calculations.
 > simdInstructions :: IO (Maybe SIMDInstructions)
 > simdInstructions =
-#if !SIMD
+#if !HAVE_SIMD
 >       return Nothing
 #else
 >       (Just . toEnum . fromIntegral) `fmap` c_reedsolomon_determine_cpu_support

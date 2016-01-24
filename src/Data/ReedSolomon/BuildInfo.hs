@@ -51,13 +51,13 @@ data FlagInfo = FlagInfo { flagSIMD :: Bool  -- ^ SIMD flag was set
 mkFlagInfo :: FlagInfo
 mkFlagInfo = FlagInfo{..}
   where
-#ifdef SIMD
+#if HAVE_SIMD
     flagSIMD = True
 #else
     flagSIMD = False
 #endif
 
-#ifdef LLVM
+#if HAVE_LLVM
     flagLLVM = True
 #else
     flagLLVM = False

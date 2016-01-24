@@ -61,7 +61,6 @@ Library
                      , Data.Vector.Storable.ByteString
   Other-Modules:       Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.GenTables
-                     , Data.ReedSolomon.Galois.NoAsm
                      , Data.ReedSolomon.Matrix
                      , Data.Vector.Generic.Compat
                      , Data.Vector.Generic.Exceptions
@@ -82,12 +81,14 @@ Library
     Ghc-Options:       -g
   Ghc-Prof-Options:    -fprof-auto
 
+  if !flag(SIMD)
+    Other-Modules:     Data.ReedSolomon.Galois.NoAsm
   if flag(SIMD)
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
-    Cpp-Options:       -DSIMD
+    Other-Modules:     Data.ReedSolomon.Galois.SIMD
+    Cpp-Options:       -DHAVE_SIMD=1
   if flag(LLVM)
     Ghc-Options:       -fllvm
-    Cpp-Options:       -DLLVM
+    Cpp-Options:       -DHAVE_LLVM=1
 
 Executable reedsolomon-simple-encoder
   Hs-Source-Dirs:      examples
@@ -200,8 +201,8 @@ Test-Suite reedsolomon-test
   Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
-    CPP-Options:       -DSIMD
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    CPP-Options:       -DHAVE_SIMD=1
+    Other-Modules:     Data.ReedSolomon.Galois.SIMD
 
 Benchmark reedsolomon-bench
   Type:                exitcode-stdio-1.0
@@ -234,8 +235,8 @@ Benchmark reedsolomon-bench
   Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
-    CPP-Options:       -DSIMD
-    Other-Modules:     Data.ReedSolomon.Galois.Amd64
+    CPP-Options:       -DHAVE_SIMD=1
+    Other-Modules:     Data.ReedSolomon.Galois.SIMD
 
 Source-Repository head
   Type:     git

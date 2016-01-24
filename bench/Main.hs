@@ -4,17 +4,17 @@
 {-# LANGUAGE RankNTypes #-}
 module Main (main) where
 
-#ifdef SIMD
+#if HAVE_SIMD
 # include "config.h"
 #endif
 
 import Control.Monad.ST (ST)
-#ifdef SIMD
+#if HAVE_SIMD
 import Data.Maybe (catMaybes)
 #endif
 import Data.Word (Word8)
 
-#ifdef SIMD
+#if HAVE_SIMD
 import Foreign.C (CSize(..))
 import Foreign.Ptr (Ptr)
 #endif
@@ -25,14 +25,14 @@ import qualified Data.Vector.Generic as V
 import qualified Data.Vector.Generic.Mutable as MV
 import qualified Data.Vector.Storable as SV
 
-#ifdef SIMD
+#if HAVE_SIMD
 import qualified Data.Vector.Generic.Sized as S
 import Data.ReedSolomon (SIMDInstructions(..))
 #endif
 import qualified Data.ReedSolomon as RS
 import qualified Data.ReedSolomon.Galois.NoAsm as NoAsm
-#ifdef SIMD
-import qualified Data.ReedSolomon.Galois.Amd64 as Amd64
+#if HAVE_SIMD
+import qualified Data.ReedSolomon.Galois.SIMD as SIMD
 #endif
 
 main :: IO ()
@@ -40,18 +40,18 @@ main = do
     level <- RS.simdInstructions
     putStrLn $ "Native instructions: " ++ maybe "None" show level
 
-#ifdef SIMD
+#if HAVE_SIMD
     let dependOn l prop = maybe Nothing (\lvl -> if l <= lvl then Just prop else Nothing ) level
 #endif
 
     defaultMain [
         bgroup "Galois/galMulSlice/1048576" [
             bench "NoAsm" $ whnf (benchGalMulSlice NoAsm.galMulSlice 177) v1048576
-#ifdef SIMD
-          , bench "Native" $ whnf (benchGalMulSlice Amd64.galMulSlice 177) v1048576
+#if HAVE_SIMD
+          , bench "Native" $ whnf (benchGalMulSlice SIMD.galMulSlice 177) v1048576
 #endif
           ]
-#ifdef SIMD
+#if HAVE_SIMD
       , bgroup "reedsolomon_gal_mul" $ catMaybes [
             Just $ bench "Native" $ whnf (benchRGM c_reedsolomon_gal_mul) v1048576
 #if RS_HAVE_AVX2
@@ -88,8 +88,8 @@ main = do
         out <- MV.new (V.length in_)
         f c in_ out
         return out
-#ifdef SIMD
-    benchRGM :: Amd64.CProto
+#if HAVE_SIMD
+    benchRGM :: SIMD.CProto
              -> SV.Vector Word8
              -> SV.Vector Word8
     benchRGM f in_ = V.create $ do
@@ -103,12 +103,12 @@ main = do
            -> SV.Vector Word8
            -> SV.MVector s Word8
            -> ST s CSize
-        f' = Amd64.cProtoToPrim f
+        f' = SIMD.cProtoToPrim f
         v16 = [0 .. 15]
 #endif
 
-#ifdef SIMD
-type CProto = Amd64.CProto
+#if HAVE_SIMD
+type CProto = SIMD.CProto
 foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
 #if RS_HAVE_AVX2
 foreign import ccall unsafe "reedsolomon_gal_mul_avx2" c_reedsolomon_gal_mul_avx2 :: CProto
