@@ -83,8 +83,6 @@ typedef v128 v;
 static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
 #if defined(__SSE2__)
         const v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
-#elif defined(__ARM_NEON__)
-        const v128 result = { .uint8x16 = vld1q_u8(in) };
 #else
         v128 result;
         memcpy(&result.u64, in, sizeof(result.u64));
@@ -108,6 +106,8 @@ static ALWAYS_INLINE v load_v(const uint8_t *in) {
         const v256 result = { .m256i = _mm256_load_si256((const __m256i *)in) };
 #elif defined(__SSE2__)
         const v128 result = { .m128i = _mm_load_si128((const __m128i *)in) };
+#elif defined(__ARM_NEON__)
+        const v128 result = { .uint8x16 = vld1q_u8(in) };
 #else
         const v128 result = loadu_v128(in);
 #endif
@@ -214,8 +214,6 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
         _mm256_storeu_si256((__m256i *)out, vec.m256i);
 #elif defined(__SSE2__)
         _mm_storeu_si128((__m128i *)out, vec.m128i);
-#elif defined(__ARM_NEON__)
-        vst1q_u8(out, vec.uint8x16);
 #else
         memcpy(out, &vec.u64, sizeof(vec.u64));
 #endif
@@ -226,6 +224,8 @@ static ALWAYS_INLINE void store_v(uint8_t *out, const v vec) {
         _mm256_store_si256((__m256i *)out, vec.m256i);
 #elif defined(__SSE2__)
         _mm_store_si128((__m128i *)out, vec.m128i);
+#elif defined(__ARM_NEON__)
+        vst1q_u8(out, vec.uint8x16);
 #else
         storeu_v(out, vec);
 #endif
