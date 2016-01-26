@@ -17,6 +17,10 @@ dependencies:
     - sudo apt-get update
     - sudo apt-get install hscolour
 
+  post:
+    - cabal install --upgrade-dependencies --constraint="template-haskell installed" --dependencies-only --enable-tests -fexamples
+    - cabal configure --enable-tests -fexamples
+
 test:
   override:
     - cd cbits; autoreconf -vi

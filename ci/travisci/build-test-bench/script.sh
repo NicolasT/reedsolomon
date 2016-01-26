@@ -4,6 +4,7 @@ echo "Running tests with SIMD support disabled"
 stack --no-terminal build \
         --flag=reedsolomon:-SIMD \
         ${STACK_BUILD_OPTIONS[*]:-} \
+        --flag=reedsolomon:examples \
         --pedantic \
         --test \
         --test-arguments "+RTS -N2" \
@@ -16,6 +17,7 @@ stack --resolver=$RESOLVER clean
 echo "Running tests with default settings (SIMD support enabled)"
 stack --no-terminal build \
         ${STACK_BUILD_OPTIONS[*]:-} \
+        --flag=reedsolomon:examples \
         --pedantic \
         --test \
         --test-arguments "+RTS -N2" \
