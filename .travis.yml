@@ -19,7 +19,9 @@ matrix:
       os: osx
     - env: SUITE=cbits-cross RESOLVER=lts-4
 
-sudo: false
+sudo: required
+dist: trusty
+
 cache:
   directories:
     - $HOME/.stack/
