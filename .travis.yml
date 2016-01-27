@@ -8,7 +8,7 @@ branches:
 matrix:
   include:
     # Stackage LTS-2 uses GHC 7.8.x, which relies on LLVM 3.4
-    - env: SUITE=build-test-bench RESOLVER=lts-2 LLVM_VERSION=3.4
+    - env: SUITE=build-test-bench RESOLVER=lts-2
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
     - env: SUITE=build-test-bench RESOLVER=lts-3 LLVM_VERSION=3.5
     # Stackage LTS-4 uses GHC-7.10.3 which relies on LLVM 3.5
@@ -20,7 +20,9 @@ matrix:
     - env: SUITE=cbits-cross RESOLVER=lts-4
     - env: SUITE=check-sdist RESOLVER=lts-4
 
-sudo: false
+sudo: required
+dist: trusty
+
 cache:
   directories:
     - $HOME/.stack/
@@ -44,6 +46,7 @@ addons:
       - gcc-arm-linux-gnueabihf
       - libc6-armhf-cross
       - libc6-dev-armhf-cross
+      - gcc-powerpc64le-linux-gnu
       - cabal-install-1.22
       - ghc-7.10.3
 

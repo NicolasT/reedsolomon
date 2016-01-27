@@ -20,6 +20,10 @@
 # include <arm_neon.h>
 #endif
 
+#if defined(__ALTIVEC__) && HAVE_ALTIVEC_H
+# include <altivec.h>
+#endif
+
 #include "reedsolomon.h"
 
 #if HAVE_FUNC_ATTRIBUTE_HOT
@@ -63,6 +67,10 @@ typedef union {
 #if __ARM_NEON__
         T1(uint8x16_t, uint8x16);
         T1(uint8x8x2_t, uint8x8x2);
+#endif
+#if __ALTIVEC__
+        T1(__vector uint8_t, uint8x16);
+        T1(__vector uint64_t, uint64x2);
 #endif
         T1(v16u8v, v16u8);
         T1(v2u64v, v2u64);
@@ -108,6 +116,8 @@ static ALWAYS_INLINE v load_v(const uint8_t *in) {
         const v128 result = { .m128i = _mm_load_si128((const __m128i *)in) };
 #elif defined(__ARM_NEON__)
         const v128 result = { .uint8x16 = vld1q_u8(in) };
+#elif defined(__ALTIVEC__)
+        const v128 result = { .uint8x16 = vec_ld(0, in) };
 #else
         const v128 result = loadu_v128(in);
 #endif
@@ -122,6 +132,9 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
         const v128 result = { .m128i = _mm_set1_epi8(c) };
 #elif defined(__ARM_NEON__)
         const v128 result = { .uint8x16 = vdupq_n_u8(c) };
+#elif defined(__ALTIVEC__)
+        const v128 result = { .uint8x16 = { c, c, c, c, c, c, c, c,
+                                            c, c, c, c, c, c, c, c } };
 #else
         uint64_t c2 = c,
                  tmp = (c2 << (7 * 8)) |
@@ -145,6 +158,13 @@ static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned in
         const v128 result = { .m128i = _mm_srli_epi64(in.m128i, n) };
 #elif defined(__ARM_NEON__)
         const v128 result = { .uint8x16 = vshrq_n_u8(in.uint8x16, n) };
+#elif defined(__ALTIVEC__)
+# if RS_HAVE_VEC_VSRD
+        const v128 shift = { .v2u64 = { n, n } },
+                   result = { .uint64x2 = vec_vsrd(in.v2u64, shift.v2u64) };
+# else
+        const v128 result = { .v2u64 = in.v2u64 >> n };
+# endif
 #else
         const v128 result = { .u64 = { in.u64[0] >> n,
                                        in.u64[1] >> n } };
@@ -160,6 +180,8 @@ static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
         const v128 result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
 #elif defined(__ARM_NEON__)
         const v128 result = { .uint8x16 = vandq_u8(a.uint8x16, b.uint8x16) };
+#elif defined(__ALTIVEC__)
+        const v128 result = { .uint8x16 = vec_and(a.uint8x16, b.uint8x16) };
 #else
         const v128 result = { .v2u64 = a.v2u64 & b.v2u64 };
 #endif
@@ -174,6 +196,8 @@ static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
         const v128 result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
 #elif defined(__ARM_NEON__)
         const v128 result = { .uint8x16 = veorq_u8(a.uint8x16, b.uint8x16) };
+#elif defined(__ALTIVEC__)
+        const v128 result = { .uint8x16 = vec_xor(a.uint8x16, b.uint8x16) };
 #else
         const v128 result = { .v2u64 = a.v2u64 ^ b.v2u64 };
 #endif
@@ -194,6 +218,9 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
                                                                vget_low_u8(mask.uint8x16)),
                                                       vtbl2_u8(vec.uint8x8x2,
                                                                vget_high_u8(mask.uint8x16))) };
+#elif defined(__ALTIVEC__)
+        const v128 zeros = set1_epi8_v(0),
+                   result = { .uint8x16 = vec_perm(vec.uint8x16, zeros.uint8x16, mask.uint8x16) };
 #else
         v128 result = { .u64 = { 0, 0 } };
 
@@ -226,6 +253,8 @@ static ALWAYS_INLINE void store_v(uint8_t *out, const v vec) {
         _mm_store_si128((__m128i *)out, vec.m128i);
 #elif defined(__ARM_NEON__)
         vst1q_u8(out, vec.uint8x16);
+#elif defined(__ALTIVEC__)
+        vec_st(vec.uint8x16, 0, out);
 #else
         storeu_v(out, vec);
 #endif

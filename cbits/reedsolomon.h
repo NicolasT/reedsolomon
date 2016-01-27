@@ -41,6 +41,10 @@ PROTO(reedsolomon_gal_mul_xor_generic);
 PROTO(reedsolomon_gal_mul_neon);
 PROTO(reedsolomon_gal_mul_xor_neon);
 #endif
+#if RS_HAVE_ALTIVEC
+PROTO(reedsolomon_gal_mul_altivec);
+PROTO(reedsolomon_gal_mul_xor_altivec);
+#endif
 
 PROTO(reedsolomon_gal_mul);
 PROTO(reedsolomon_gal_mul_xor);
@@ -52,6 +56,7 @@ typedef enum {
         REEDSOLOMON_CPU_AVX = 3,
         REEDSOLOMON_CPU_AVX2 = 4,
         REEDSOLOMON_CPU_NEON = 5,
+        REEDSOLOMON_CPU_ALTIVEC = 6,
 } reedsolomon_cpu_support;
 
 reedsolomon_cpu_support reedsolomon_determine_cpu_support(void);
