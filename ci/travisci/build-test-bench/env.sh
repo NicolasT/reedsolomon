@@ -6,7 +6,12 @@ case "$TRAVIS_OS_NAME" in
     linux)
             TAR_WILDCARDS=--wildcards;
             export TAR_WILDCARDS;
-            STACK_BUILD_OPTIONS=("--ghc-options" "-pgmlo opt-$LLVM_VERSION -pgmlc llc-$LLVM_VERSION'");
+            case "${LLVM_VERSION:-x}" in
+                x)
+                    STACK_BUILD_OPTIONS="--flag=reedsolomon:-LLVM";;
+                *)
+                    STACK_BUILD_OPTIONS=("--ghc-options" "-pgmlo opt-$LLVM_VERSION -pgmlc llc-$LLVM_VERSION'");;
+            esac
             export STACK_BUILD_OPTIONS;;
     osx)
             STACK_BUILD_OPTIONS="--flag=reedsolomon:-LLVM";

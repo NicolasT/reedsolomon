@@ -32,6 +32,9 @@ HOST_ISA=`uname -p`
 build $HOST_ISA '' ''
 build arm arm-linux-gnueabihf ''
 build arm-neon arm-linux-gnueabihf '-mfpu=neon'
+build ppc64le powerpc64le-linux-gnu '-mno-altivec'
+build ppc64le-altivec powerpc64le-linux-gnu '-maltivec'
+build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8'
 
 stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
@@ -39,3 +42,13 @@ stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs --
 stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-arm-static -L /usr/arm-linux-gnueabihf ./reedsolomon-gal-mul-stdio-arm-neon'
+
+stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+    ./reedsolomon-gal-mul-stdio-$HOST_ISA \
+    'qemu-ppc64le-static -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le'
+stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+    ./reedsolomon-gal-mul-stdio-$HOST_ISA \
+    'qemu-ppc64le-static -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-altivec'
+stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+    ./reedsolomon-gal-mul-stdio-$HOST_ISA \
+    'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-power8'
