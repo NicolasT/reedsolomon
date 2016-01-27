@@ -23,12 +23,14 @@ sudo: false
 cache:
   directories:
     - $HOME/.stack/
+    - $HOME/.cabal/
 
 addons:
   apt:
     sources:
       - llvm-toolchain-precise-3.5
       - ubuntu-toolchain-r-test
+      - hvr-ghc
     packages:
       - libgmp-dev
       - llvm-3.4
@@ -41,6 +43,8 @@ addons:
       - gcc-arm-linux-gnueabihf
       - libc6-armhf-cross
       - libc6-dev-armhf-cross
+      - cabal-install-1.22
+      - ghc-7.10.3
 
 before_install:
   - ci/step.sh travisci before-install
