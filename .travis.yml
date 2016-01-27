@@ -18,6 +18,7 @@ matrix:
     - env: SUITE=build-test-bench RESOLVER=lts-4
       os: osx
     - env: SUITE=cbits-cross RESOLVER=lts-4
+    - env: SUITE=check-sdist RESOLVER=lts-4
 
 sudo: false
 cache:
