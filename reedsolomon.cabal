@@ -32,11 +32,17 @@ Extra-Source-Files:  README.md
                    , cbits/reedsolomon.c
                    , cbits/reedsolomon.h
                    , cbits/reedsolomon_dispatch.c
+                   , cbits/malloc.c
+                   , cbits/reedsolomon-gal-mul-stdio.c
+                   , cbits/reedsolomon-gal-mul-stdio-quickcheck.hs
+                   , cbits/compare-isa.sh
 
                    , cbits/aclocal.m4
                    , cbits/ar-lib
                    , cbits/compile
+                   , cbits/config.guess
                    , cbits/config.h.in
+                   , cbits/config.sub
                    , cbits/configure
                    , cbits/depcomp
                    , cbits/install-sh
