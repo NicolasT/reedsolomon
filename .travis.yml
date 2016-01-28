@@ -11,13 +11,13 @@ matrix:
     - env: SUITE=build-test-bench RESOLVER=lts-2
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
     - env: SUITE=build-test-bench RESOLVER=lts-3 LLVM_VERSION=3.5
-    # Stackage LTS-4 uses GHC-7.10.3 which relies on LLVM 3.5
-    - env: SUITE=build-test-bench RESOLVER=lts-4 LLVM_VERSION=3.5
+    # Stackage lts-5 uses GHC-7.10.3 which relies on LLVM 3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-5 LLVM_VERSION=3.5
     # Current nightly uses GHC 7.10.x
     - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.5
-    - env: SUITE=build-test-bench RESOLVER=lts-4
+    - env: SUITE=build-test-bench RESOLVER=lts-5
       os: osx
-    - env: SUITE=cbits-cross RESOLVER=lts-4
+    - env: SUITE=cbits-cross RESOLVER=lts-5
 
 sudo: required
 dist: trusty
