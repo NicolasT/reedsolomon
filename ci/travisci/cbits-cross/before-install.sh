@@ -12,8 +12,8 @@ curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | \
 # Retrieve the package from the source repository and 'install' it manually
 # instead...
 pushd /tmp
-QEMU_USER_PKG=qemu-user-static_2.3+dfsg-5ubuntu9.1_amd64.deb
-wget http://security.ubuntu.com/ubuntu/pool/universe/q/qemu/$QEMU_USER_PKG
+QEMU_USER_PKG=qemu-user-static_2.5+dfsg-5ubuntu2_amd64.deb
+wget http://launchpadlibrarian.net/240266007/$QEMU_USER_PKG
 dpkg -x $QEMU_USER_PKG qemu-user
 mv qemu-user/usr/bin/qemu-ppc64le-static $LOCAL_BIN/
 popd

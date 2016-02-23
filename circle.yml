@@ -8,17 +8,15 @@ machine:
   ghc:
     version: 7.10.2
 
-  pre:
-    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 10
-    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
-
 dependencies:
   pre:
     - sudo apt-get update
     - sudo apt-get install hscolour
 
-  post:
-    - cabal install --upgrade-dependencies --constraint="template-haskell installed" --dependencies-only --enable-tests -fexamples
+  override:
+    - cabal update
+    - cabal sandbox init
+    - cabal install --constraint="template-haskell installed" --dependencies-only --enable-tests -fexamples
     - cabal configure --enable-tests -fexamples
 
 test:
