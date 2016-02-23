@@ -14,7 +14,6 @@ environment:
 cache:
   - C:\stack -> stack.yaml
   # - '%USERPROFILE%\AppData\Local\Programs\stack'
-  - C:\Users\appveyor\AppData\Local\Programs\stack -> stack.yaml
 
 install:
   - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
