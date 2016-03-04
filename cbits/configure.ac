@@ -77,6 +77,19 @@ AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all], [], [], [
 AX_APPEND_COMPILE_FLAGS([-funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
 AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches])
 
+## Check for -fPIC
+AC_MSG_CHECKING([whether C compiler accepts -fPIC])
+rs_gcc_fpic_save_flags=$[]_AC_LANG_PREFIX[]FLAGS
+_AC_LANG_PREFIX[]FLAGS="-fPIC -Werror"
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [],
+        [return 0;])],
+    [AC_MSG_RESULT([yes])
+     _AC_LANG_PREFIX[]FLAGS="$rs_gcc_fpic_save_flags -fPIC"],
+    [AC_MSG_RESULT([no])
+     _AC_LANG_PREFIX[]FLAGS="$rs_gcc_fpic_save_flags"])
+
 ## Checks for supported ISA compiler options.
 AX_CHECK_COMPILE_FLAG([-msse2], [rs_sse2=1], [rs_sse2=0])
 AX_CHECK_COMPILE_FLAG([-mssse3], [rs_ssse3=1], [rs_ssse3=0])
