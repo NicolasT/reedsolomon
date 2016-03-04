@@ -75,7 +75,7 @@ AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all], [], [], [
             return result;
         ]])])
 AX_APPEND_COMPILE_FLAGS([-funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
-AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches -grecord-gcc-switches])
+AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches])
 
 ## Checks for supported ISA compiler options.
 AX_CHECK_COMPILE_FLAG([-msse2], [rs_sse2=1], [rs_sse2=0])
