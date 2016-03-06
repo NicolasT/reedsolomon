@@ -58,7 +58,7 @@ _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AS_IF([test x$PACKAGE_VERSION = x999],
       AX_APPEND_COMPILE_FLAGS([-Werror]))
-AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format])
+AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format -Wundef])
 AX_APPEND_COMPILE_FLAGS([-O3])
 dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
 dnl The error above is only triggered when the Graphite optimization is actually

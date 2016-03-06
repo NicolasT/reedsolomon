@@ -26,15 +26,18 @@
 #endif
 
 #include <stddef.h>
-#if HAVE_CPUID_H
+#if defined(HAVE_CPUID_H) && HAVE_CPUID_H
+# define USE_CPUID_H 1
 # include <cpuid.h>
+#else
+# define USE_CPUID_H 0
 #endif
 
 #include "reedsolomon.h"
 
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
-#if HAVE_CPUID_H
+#if USE_CPUID_H
 
 #if !RS_HAVE_GENERIC
 # error Generic routines not available on x86. This is not supported.
