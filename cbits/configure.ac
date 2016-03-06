@@ -61,7 +61,7 @@ _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AS_IF([test x$PACKAGE_VERSION = x999],
       AX_APPEND_COMPILE_FLAGS([-Werror]))
-AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format -Wundef])
+AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format -Wundef -Wunknown-pragmas])
 AX_APPEND_COMPILE_FLAGS([-O3])
 dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
 dnl The error above is only triggered when the Graphite optimization is actually
@@ -100,6 +100,29 @@ AX_CHECK_COMPILE_FLAG([-msse2], [rs_sse2=1], [rs_sse2=0])
 AX_CHECK_COMPILE_FLAG([-mssse3], [rs_ssse3=1], [rs_ssse3=0])
 AX_CHECK_COMPILE_FLAG([-mavx], [rs_avx=1], [rs_avx=0])
 AX_CHECK_COMPILE_FLAG([-mavx2], [rs_avx2=1], [rs_avx2=0])
+
+## Checks for compiler-specific features
+AC_MSG_CHECKING([whether Clang's `loop unroll` pragma works])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [
+            #include <stdio.h>
+        ],
+        [
+            int i = 0;
+            #pragma clang loop unroll(enable)
+            for(i = 0; i < 8; i++) {
+                printf("Hello, world!");
+            }
+        ])],
+    [AC_MSG_RESULT([yes])
+     rs_have_clang_loop_unroll=1],
+    [AC_MSG_RESULT([no])
+     rs_have_clang_loop_unroll=0])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_CLANG_LOOP_UNROLL],
+    [$rs_have_clang_loop_unroll],
+    [Define to 1 if Clang's `loop unroll` pragma works])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h unistd.h])

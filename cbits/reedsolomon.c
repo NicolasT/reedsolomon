@@ -472,7 +472,7 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
 # define STORE(addr, vec) storeu_v(addr, vec)
 #endif
 
-#ifdef __clang__
+#if RS_HAVE_CLANG_LOOP_UNROLL
 # pragma clang loop unroll(enable)
 #endif
         for(size_t x = 0; x < len / sizeof(v); x++) {
