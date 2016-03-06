@@ -35,6 +35,7 @@ build arm-neon arm-linux-gnueabihf '-mfpu=neon'
 build ppc64le powerpc64le-linux-gnu '-mno-altivec'
 build ppc64le-altivec powerpc64le-linux-gnu '-maltivec'
 build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8'
+build aarch64 aarch64-linux-gnu ''
 
 stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
@@ -52,3 +53,6 @@ stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs --
 stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-power8'
+stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+    ./reedsolomon-gal-mul-stdio-$HOST_ISA \
+    'qemu-aarch64-static -L /usr/aarch64-linux-gnu ./reedsolomon-gal-mul-stdio-aarch64'

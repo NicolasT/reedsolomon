@@ -40,9 +40,11 @@ build_for_arch armv7-rpi2-linux-gnueabihf neon '-mfpu=neon'
 build_for_arch powerpc64-unknown-linux-gnu generic '-static'
 build_for_arch powerpc64-unknown-linux-gnu altivec '-static -maltivec'
 build_for_arch powerpc64-unknown-linux-gnu altivec-power8 '-static -mcpu=power8'
+build_for_arch aarch64-unknown-linux-musleabi generic '-static'
 
 test_arch arm armv7-rpi2-linux-gnueabihf generic
 test_arch arm armv7-rpi2-linux-gnueabihf neon
 test_arch ppc64 powerpc64-unknown-linux-gnu generic
 test_arch ppc64 powerpc64-unknown-linux-gnu altivec
 test_arch ppc64 powerpc64-unknown-linux-gnu altivec-power8 POWER8
+test_arch aarch64 aarch64-unknown-linux-musleabi generic
