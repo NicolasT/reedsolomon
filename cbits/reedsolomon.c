@@ -28,21 +28,28 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #if defined(__SSE2__) && __SSE2__ && defined(HAVE_EMMINTRIN_H) && HAVE_EMMINTRIN_H
 # define USE_SSE2 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <emmintrin.h>
 #else
 # define USE_SSE2 0
 #endif
 #if defined(__SSSE3__) && __SSSE3__ && defined(HAVE_TMMINTRIN_H) && HAVE_TMMINTRIN_H
 # define USE_SSSE3 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <tmmintrin.h>
 #else
 # define USE_SSSE3 0
 #endif
 #if defined(__AVX2__) && __AVX2__ && defined(HAVE_IMMINTRIN_H) && HAVE_IMMINTRIN_H
 # define USE_AVX2 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 32
 # include <immintrin.h>
 #else
 # define USE_AVX2 0
@@ -50,6 +57,8 @@
 
 #if defined(__ARM_NEON__) && __ARM_NEON__ && defined(HAVE_ARM_NEON_H) && HAVE_ARM_NEON_H
 # define USE_ARM_NEON 1
+#undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <arm_neon.h>
 #else
 # define USE_ARM_NEON 0
@@ -57,9 +66,32 @@
 
 #if defined(__ALTIVEC__) && __ALTIVEC__ && defined(HAVE_ALTIVEC_H) && HAVE_ALTIVEC_H
 # define USE_ALTIVEC 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <altivec.h>
 #else
 # define USE_ALTIVEC 0
+#endif
+
+#ifndef VECTOR_SIZE
+/* 'Generic' code */
+# define VECTOR_SIZE 16
+#endif
+
+#if VECTOR_SIZE <= RS_ASSUMED_ALIGNMENT
+/* Assert RS_ASSUMED_ALIGNMENT is a multiple of VECTOR_SIZE, as expected */
+# if __STDC_VERSION__ >= 201112L || defined(__cplusplus) || defined(static_assert)
+static_assert(RS_ASSUMED_ALIGNMENT % VECTOR_SIZE == 0, "Alignment mismatch");
+# else
+#  warning Assuming RS_ASSUMED_ALIGNMENT is a multiple of VECTOR_SIZE, enablign aligned access
+# endif
+# define USE_ALIGNED_ACCESS 1
+# define ALIGNED_ACCESS
+# define UNALIGNED_ACCESS __attribute__((unused))
+#else
+# define USE_ALIGNED_ACCESS 0
+# define ALIGNED_ACCESS __attribute__((unused))
+# define UNALIGNED_ACCESS
 #endif
 
 #include "reedsolomon.h"
@@ -94,8 +126,10 @@
 typedef uint8_t v16u8v __attribute__((vector_size(16)));
 typedef uint64_t v2u64v __attribute__((vector_size(16)));
 
-#define T(t, n) t n[128 / 8 / sizeof(t)]
+#define T(t, n) t n[VSIZE / 8 / sizeof(t)]
 #define T1(t, n) t n
+
+#define VSIZE 128
 typedef union {
         T(uint8_t, u8);
         T(uint64_t, u64);
@@ -113,21 +147,26 @@ typedef union {
         T1(v16u8v, v16u8);
         T1(v2u64v, v2u64);
 } v128 __attribute__((aligned(16)));
-# undef T
-# undef T1
+#undef VSIZE
 
-#if USE_AVX2
+#define VSIZE 256
 typedef union {
+        T(uint8_t, u8);
+#if USE_AVX2
         __m256i m256i;
+#endif
 } v256 __attribute__((aligned(32)));
+#undef VSIZE
 
-typedef v256 v;
-# define ALIGNED_ACCESS __attribute__((unused))
-# define UNALIGNED_ACCESS
-#else
-# define ALIGNED_ACCESS
-# define UNALIGNED_ACCESS __attribute__((unused))
+#undef T
+#undef T1
+
+#if VECTOR_SIZE == 16
 typedef v128 v;
+#elif VECTOR_SIZE == 32
+typedef v256 v;
+#else
+# error Unsupported VECTOR_SIZE
 #endif
 
 static ALWAYS_INLINE UNALIGNED_ACCESS v128 loadu_v128(const uint8_t *in) {
@@ -428,12 +467,10 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
 
         size_t done = 0;
 
-#ifndef __AVX2__
-        /* Assume in and out are 16-byte aligned */
+#if USE_ALIGNED_ACCESS
 # define LOAD(addr) load_v(addr)
 # define STORE(addr, vec) store_v(addr, vec)
 #else
-        /* Not necessarily 32-byte aligned... Use unaligned access ops */
 # define LOAD(addr) loadu_v(addr)
 # define STORE(addr, vec) storeu_v(addr, vec)
 #endif

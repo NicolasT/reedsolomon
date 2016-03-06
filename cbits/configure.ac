@@ -1,6 +1,9 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
+dnl Assumed minimal alignment of any input/output buffers allocated by GHC
+m4_define([_RS_ASSUMED_ALIGNMENT], [16])
+
 AC_PREREQ([2.68])
 AC_INIT([reedsolomon],
         m4_esyscmd_s([grep ^Version ../reedsolomon.cabal | sed -e 's/^Version\:[[:space:]]*//']),
@@ -55,6 +58,7 @@ AX_GCC_FUNC_ATTRIBUTE([force_align_arg_pointer])
 _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 
 ## Checks for supported generic compiler options.
+AX_APPEND_COMPILE_FLAGS([--std=c11])
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AS_IF([test x$PACKAGE_VERSION = x999],
       AX_APPEND_COMPILE_FLAGS([-Werror]))
@@ -195,6 +199,13 @@ AC_DEFINE_UNQUOTED(
     [RS_HAVE_ALTIVEC],
     [$rs_altivec],
     [Define to 1 if AltiVec works])
+
+AC_MSG_CHECKING([for assumed data alignment])
+AC_MSG_RESULT(_RS_ASSUMED_ALIGNMENT)
+AC_DEFINE_UNQUOTED(
+    [RS_ASSUMED_ALIGNMENT],
+    _RS_ASSUMED_ALIGNMENT,
+    [Assumed data alignment])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
