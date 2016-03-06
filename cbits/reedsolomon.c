@@ -108,11 +108,15 @@ typedef union {
 } v256 __attribute__((aligned(32)));
 
 typedef v256 v;
+# define ALIGNED_ACCESS __attribute__((unused))
+# define UNALIGNED_ACCESS
 #else
+# define ALIGNED_ACCESS
+# define UNALIGNED_ACCESS __attribute__((unused))
 typedef v128 v;
 #endif
 
-static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
+static ALWAYS_INLINE UNALIGNED_ACCESS v128 loadu_v128(const uint8_t *in) {
 #if defined(__SSE2__)
         const v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
 #else
@@ -123,7 +127,7 @@ static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
         return result;
 }
 
-static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
+static ALWAYS_INLINE UNALIGNED_ACCESS v loadu_v(const uint8_t *in) {
 #if defined(__AVX2__)
         const v256 result = { .m256i = _mm256_loadu_si256((const __m256i *)in) };
 #else
@@ -133,7 +137,7 @@ static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
         return result;
 }
 
-static ALWAYS_INLINE v load_v(const uint8_t *in) {
+static ALWAYS_INLINE ALIGNED_ACCESS v load_v(const uint8_t *in) {
 #if defined(__AVX2__)
         const v256 result = { .m256i = _mm256_load_si256((const __m256i *)in) };
 #elif defined(__SSE2__)
@@ -260,7 +264,7 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
         return result;
 }
 
-static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
+static ALWAYS_INLINE UNALIGNED_ACCESS void storeu_v(uint8_t *out, const v vec) {
 #if defined(__AVX2__)
         _mm256_storeu_si256((__m256i *)out, vec.m256i);
 #elif defined(__SSE2__)
@@ -270,7 +274,7 @@ static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
 #endif
 }
 
-static ALWAYS_INLINE void store_v(uint8_t *out, const v vec) {
+static ALWAYS_INLINE ALIGNED_ACCESS void store_v(uint8_t *out, const v vec) {
 #if defined(__AVX2__)
         _mm256_store_si256((__m256i *)out, vec.m256i);
 #elif defined(__SSE2__)
