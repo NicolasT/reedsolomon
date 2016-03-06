@@ -41,12 +41,6 @@
 #else
 # define USE_SSSE3 0
 #endif
-#if defined(__AVX__) && __AVX__ && defined(HAVE_IMMINTRIN_H) && HAVE_IMMINTRIN_H
-# define USE_AVX 1
-# include <immintrin.h>
-#else
-# define USE_AVX 0
-#endif
 #if defined(__AVX2__) && __AVX2__ && defined(HAVE_IMMINTRIN_H) && HAVE_IMMINTRIN_H
 # define USE_AVX2 1
 # include <immintrin.h>
