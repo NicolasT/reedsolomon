@@ -80,11 +80,8 @@
 
 #if VECTOR_SIZE <= RS_ASSUMED_ALIGNMENT
 /* Assert RS_ASSUMED_ALIGNMENT is a multiple of VECTOR_SIZE, as expected */
-# if __STDC_VERSION__ >= 201112L || defined(__cplusplus) || defined(static_assert)
-static_assert(RS_ASSUMED_ALIGNMENT % VECTOR_SIZE == 0, "Alignment mismatch");
-# else
-#  warning Assuming RS_ASSUMED_ALIGNMENT is a multiple of VECTOR_SIZE, enablign aligned access
-# endif
+static __attribute__((unused)) int _rs_assert_assumed_alignment_is_multiple_of_vector_size[
+        RS_ASSUMED_ALIGNMENT % VECTOR_SIZE == 0 ? 1 : -1];
 # define USE_ALIGNED_ACCESS 1
 # define ALIGNED_ACCESS
 # define UNALIGNED_ACCESS __attribute__((unused))

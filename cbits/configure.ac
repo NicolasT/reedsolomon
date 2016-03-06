@@ -58,7 +58,6 @@ AX_GCC_FUNC_ATTRIBUTE([force_align_arg_pointer])
 _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 
 ## Checks for supported generic compiler options.
-AX_APPEND_COMPILE_FLAGS([--std=c11])
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AS_IF([test x$PACKAGE_VERSION = x999],
       AX_APPEND_COMPILE_FLAGS([-Werror]))
