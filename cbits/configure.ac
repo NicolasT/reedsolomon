@@ -1,6 +1,9 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
+dnl Assumed minimal alignment of any input/output buffers allocated by GHC
+m4_define([_RS_ASSUMED_ALIGNMENT], [16])
+
 AC_PREREQ([2.68])
 AC_INIT([reedsolomon],
         m4_esyscmd_s([grep ^Version ../reedsolomon.cabal | sed -e 's/^Version\:[[:space:]]*//']),
@@ -56,7 +59,9 @@ _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 
 ## Checks for supported generic compiler options.
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
-AX_APPEND_COMPILE_FLAGS([-Wall -Wextra])
+AS_IF([test x$PACKAGE_VERSION = x999],
+      AX_APPEND_COMPILE_FLAGS([-Werror]))
+AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format -Wundef -Wunknown-pragmas])
 AX_APPEND_COMPILE_FLAGS([-O3])
 dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
 dnl The error above is only triggered when the Graphite optimization is actually
@@ -75,13 +80,49 @@ AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all], [], [], [
             return result;
         ]])])
 AX_APPEND_COMPILE_FLAGS([-funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
-AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches -grecord-gcc-switches])
+AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches])
+
+## Check for -fPIC
+AC_MSG_CHECKING([whether C compiler accepts -fPIC])
+rs_gcc_fpic_save_flags=$[]_AC_LANG_PREFIX[]FLAGS
+_AC_LANG_PREFIX[]FLAGS="-fPIC -Werror"
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [],
+        [return 0;])],
+    [AC_MSG_RESULT([yes])
+     _AC_LANG_PREFIX[]FLAGS="$rs_gcc_fpic_save_flags -fPIC"],
+    [AC_MSG_RESULT([no])
+     _AC_LANG_PREFIX[]FLAGS="$rs_gcc_fpic_save_flags"])
 
 ## Checks for supported ISA compiler options.
 AX_CHECK_COMPILE_FLAG([-msse2], [rs_sse2=1], [rs_sse2=0])
 AX_CHECK_COMPILE_FLAG([-mssse3], [rs_ssse3=1], [rs_ssse3=0])
 AX_CHECK_COMPILE_FLAG([-mavx], [rs_avx=1], [rs_avx=0])
 AX_CHECK_COMPILE_FLAG([-mavx2], [rs_avx2=1], [rs_avx2=0])
+
+## Checks for compiler-specific features
+AC_MSG_CHECKING([whether Clang's `loop unroll` pragma works])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [
+            #include <stdio.h>
+        ],
+        [
+            int i = 0;
+            #pragma clang loop unroll(enable)
+            for(i = 0; i < 8; i++) {
+                printf("Hello, world!");
+            }
+        ])],
+    [AC_MSG_RESULT([yes])
+     rs_have_clang_loop_unroll=1],
+    [AC_MSG_RESULT([no])
+     rs_have_clang_loop_unroll=0])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_CLANG_LOOP_UNROLL],
+    [$rs_have_clang_loop_unroll],
+    [Define to 1 if Clang's `loop unroll` pragma works])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h unistd.h])
@@ -180,6 +221,13 @@ AC_DEFINE_UNQUOTED(
     [RS_HAVE_ALTIVEC],
     [$rs_altivec],
     [Define to 1 if AltiVec works])
+
+AC_MSG_CHECKING([for assumed data alignment])
+AC_MSG_RESULT(_RS_ASSUMED_ALIGNMENT)
+AC_DEFINE_UNQUOTED(
+    [RS_ASSUMED_ALIGNMENT],
+    _RS_ASSUMED_ALIGNMENT,
+    [Assumed data alignment])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

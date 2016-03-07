@@ -28,47 +28,90 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
-/* These are in 'reverse' order for good reason: 'elif' wouldn't work */
-#if defined(__AVX2__) && HAVE_IMMINTRIN_H
-# include <immintrin.h>
-#elif defined(__AVX__) && HAVE_IMMINTRIN_H
-# include <immintrin.h>
-#elif defined(__SSSE3__) && HAVE_TMMINTRIN_H
-# include <tmmintrin.h>
-#elif defined(__SSE2__) && HAVE_EMMINTRIN_H
+#if defined(__SSE2__) && __SSE2__ && defined(HAVE_EMMINTRIN_H) && HAVE_EMMINTRIN_H
+# define USE_SSE2 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <emmintrin.h>
+#else
+# define USE_SSE2 0
+#endif
+#if defined(__SSSE3__) && __SSSE3__ && defined(HAVE_TMMINTRIN_H) && HAVE_TMMINTRIN_H
+# define USE_SSSE3 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 16
+# include <tmmintrin.h>
+#else
+# define USE_SSSE3 0
+#endif
+#if defined(__AVX2__) && __AVX2__ && defined(HAVE_IMMINTRIN_H) && HAVE_IMMINTRIN_H
+# define USE_AVX2 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 32
+# include <immintrin.h>
+#else
+# define USE_AVX2 0
 #endif
 
-#if defined(__ARM_NEON__) && HAVE_ARM_NEON_H
+#if defined(__ARM_NEON__) && __ARM_NEON__ && defined(HAVE_ARM_NEON_H) && HAVE_ARM_NEON_H
+# define USE_ARM_NEON 1
+#undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <arm_neon.h>
+#else
+# define USE_ARM_NEON 0
 #endif
 
-#if defined(__ALTIVEC__) && HAVE_ALTIVEC_H
+#if defined(__ALTIVEC__) && __ALTIVEC__ && defined(HAVE_ALTIVEC_H) && HAVE_ALTIVEC_H
+# define USE_ALTIVEC 1
+# undef VECTOR_SIZE
+# define VECTOR_SIZE 16
 # include <altivec.h>
+#else
+# define USE_ALTIVEC 0
+#endif
+
+#ifndef VECTOR_SIZE
+/* 'Generic' code */
+# define VECTOR_SIZE 16
+#endif
+
+#if VECTOR_SIZE <= RS_ASSUMED_ALIGNMENT
+/* Assert RS_ASSUMED_ALIGNMENT is a multiple of VECTOR_SIZE, as expected */
+static __attribute__((unused)) int _rs_assert_assumed_alignment_is_multiple_of_vector_size[
+        RS_ASSUMED_ALIGNMENT % VECTOR_SIZE == 0 ? 1 : -1];
+# define USE_ALIGNED_ACCESS 1
+# define ALIGNED_ACCESS
+# define UNALIGNED_ACCESS __attribute__((unused))
+#else
+# define USE_ALIGNED_ACCESS 0
+# define ALIGNED_ACCESS __attribute__((unused))
+# define UNALIGNED_ACCESS
 #endif
 
 #include "reedsolomon.h"
 
-#if HAVE_FUNC_ATTRIBUTE_HOT
+#if defined(HAVE_FUNC_ATTRIBUTE_HOT) && HAVE_FUNC_ATTRIBUTE_HOT
 # define HOT_FUNCTION   __attribute__((hot))
 #else
 # define HOT_FUNCTION
 #endif
 
-#if HAVE_FUNC_ATTRIBUTE_CONST
+#if defined(HAVE_FUNC_ATTRIBUTE_CONST) && HAVE_FUNC_ATTRIBUTE_CONST
 # define CONST_FUNCTION __attribute__((const))
 #else
 # define CONST_FUNCTION
 #endif
 
-#if HAVE_FUNC_ATTRIBUTE_ALWAYS_INLINE
+#if defined(HAVE_FUNC_ATTRIBUTE_ALWAYS_INLINE) && HAVE_FUNC_ATTRIBUTE_ALWAYS_INLINE
 # define ALWAYS_INLINE  inline __attribute__((always_inline))
 #else
 # define ALWAYS_INLINE  inline
 #endif
 
-#if HAVE_FUNC_ATTRIBUTE_FORCE_ALIGN_ARG_POINTER
+#if defined(HAVE_FUNC_ATTRIBUTE_FORCE_ALIGN_ARG_POINTER) && HAVE_FUNC_ATTRIBUTE_FORCE_ALIGN_ARG_POINTER
 # define FORCE_ALIGN_ARG_POINTER __attribute__((force_align_arg_pointer))
 #else
 # define FORCE_ALIGN_ARG_POINTER
@@ -80,40 +123,51 @@
 typedef uint8_t v16u8v __attribute__((vector_size(16)));
 typedef uint64_t v2u64v __attribute__((vector_size(16)));
 
-#define T(t, n) t n[128 / 8 / sizeof(t)]
+#define T(t, n) t n[VSIZE / 8 / sizeof(t)]
 #define T1(t, n) t n
+
+#define VSIZE 128
 typedef union {
         T(uint8_t, u8);
         T(uint64_t, u64);
-#if __SSE2__
+#if USE_SSE2
         T1(__m128i, m128i);
 #endif
-#if __ARM_NEON__
+#if USE_ARM_NEON
         T1(uint8x16_t, uint8x16);
         T1(uint8x8x2_t, uint8x8x2);
 #endif
-#if __ALTIVEC__
+#if USE_ALTIVEC
         T1(__vector uint8_t, uint8x16);
         T1(__vector uint64_t, uint64x2);
 #endif
         T1(v16u8v, v16u8);
         T1(v2u64v, v2u64);
 } v128 __attribute__((aligned(16)));
-# undef T
-# undef T1
+#undef VSIZE
 
-#ifdef __AVX2__
+#define VSIZE 256
 typedef union {
+        T(uint8_t, u8);
+#if USE_AVX2
         __m256i m256i;
+#endif
 } v256 __attribute__((aligned(32)));
+#undef VSIZE
 
+#undef T
+#undef T1
+
+#if VECTOR_SIZE == 16
+typedef v128 v;
+#elif VECTOR_SIZE == 32
 typedef v256 v;
 #else
-typedef v128 v;
+# error Unsupported VECTOR_SIZE
 #endif
 
-static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
-#if defined(__SSE2__)
+static ALWAYS_INLINE UNALIGNED_ACCESS v128 loadu_v128(const uint8_t *in) {
+#if USE_SSE2
         const v128 result = { .m128i = _mm_loadu_si128((const __m128i *)in) };
 #else
         v128 result;
@@ -123,8 +177,8 @@ static ALWAYS_INLINE v128 loadu_v128(const uint8_t *in) {
         return result;
 }
 
-static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
-#if defined(__AVX2__)
+static ALWAYS_INLINE UNALIGNED_ACCESS v loadu_v(const uint8_t *in) {
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_loadu_si256((const __m256i *)in) };
 #else
         const v128 result = loadu_v128(in);
@@ -133,14 +187,14 @@ static ALWAYS_INLINE v loadu_v(const uint8_t *in) {
         return result;
 }
 
-static ALWAYS_INLINE v load_v(const uint8_t *in) {
-#if defined(__AVX2__)
+static ALWAYS_INLINE ALIGNED_ACCESS v load_v(const uint8_t *in) {
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_load_si256((const __m256i *)in) };
-#elif defined(__SSE2__)
+#elif USE_SSE2
         const v128 result = { .m128i = _mm_load_si128((const __m128i *)in) };
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         const v128 result = { .uint8x16 = vld1q_u8(in) };
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
         const v128 result = { .uint8x16 = vec_ld(0, in) };
 #else
         const v128 result = loadu_v128(in);
@@ -150,13 +204,13 @@ static ALWAYS_INLINE v load_v(const uint8_t *in) {
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
-#if defined(__AVX2__)
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_set1_epi8(c) };
-#elif defined(__SSE2__)
+#elif USE_SSE2
         const v128 result = { .m128i = _mm_set1_epi8(c) };
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         const v128 result = { .uint8x16 = vdupq_n_u8(c) };
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
         const v128 result = { .uint8x16 = { c, c, c, c, c, c, c, c,
                                             c, c, c, c, c, c, c, c } };
 #else
@@ -176,13 +230,13 @@ static ALWAYS_INLINE CONST_FUNCTION v set1_epi8_v(const uint8_t c) {
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned int n) {
-#if defined(__AVX2__)
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_srli_epi64(in.m256i, n) };
-#elif defined(__SSE2__)
+#elif USE_SSE2
         const v128 result = { .m128i = _mm_srli_epi64(in.m128i, n) };
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         const v128 result = { .uint8x16 = vshrq_n_u8(in.uint8x16, n) };
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
 # if RS_HAVE_VEC_VSRD
         const v128 shift = { .v2u64 = { n, n } },
                    result = { .uint64x2 = vec_vsrd(in.v2u64, shift.v2u64) };
@@ -198,13 +252,13 @@ static ALWAYS_INLINE CONST_FUNCTION v srli_epi64_v(const v in, const unsigned in
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
-#if defined(__AVX2__)
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_and_si256(a.m256i, b.m256i) };
-#elif defined(__SSE2__)
+#elif USE_SSE2
         const v128 result = { .m128i = _mm_and_si128(a.m128i, b.m128i) };
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         const v128 result = { .uint8x16 = vandq_u8(a.uint8x16, b.uint8x16) };
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
         const v128 result = { .uint8x16 = vec_and(a.uint8x16, b.uint8x16) };
 #else
         const v128 result = { .v2u64 = a.v2u64 & b.v2u64 };
@@ -214,13 +268,13 @@ static ALWAYS_INLINE CONST_FUNCTION v and_v(const v a, const v b) {
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
-#if defined(__AVX2__)
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_xor_si256(a.m256i, b.m256i) };
-#elif defined(__SSE2__)
+#elif USE_SSE2
         const v128 result = { .m128i = _mm_xor_si128(a.m128i, b.m128i) };
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         const v128 result = { .uint8x16 = veorq_u8(a.uint8x16, b.uint8x16) };
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
         const v128 result = { .uint8x16 = vec_xor(a.uint8x16, b.uint8x16) };
 #else
         const v128 result = { .v2u64 = a.v2u64 ^ b.v2u64 };
@@ -230,11 +284,11 @@ static ALWAYS_INLINE CONST_FUNCTION v xor_v(const v a, const v b) {
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) {
-#if defined(__AVX2__)
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_shuffle_epi8(vec.m256i, mask.m256i) };
-#elif defined(__SSSE3__)
+#elif USE_SSSE3
         const v128 result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         /* There's no NEON instruction mapping 1-to-1 to _mm_shuffle_epi8, but
          * this should have the same result...
          */
@@ -242,7 +296,7 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
                                                                vget_low_u8(mask.uint8x16)),
                                                       vtbl2_u8(vec.uint8x8x2,
                                                                vget_high_u8(mask.uint8x16))) };
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
         const v128 zeros = set1_epi8_v(0),
                    result = { .uint8x16 = vec_perm(vec.uint8x16, zeros.uint8x16, mask.uint8x16) };
 #else
@@ -260,24 +314,24 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
         return result;
 }
 
-static ALWAYS_INLINE void storeu_v(uint8_t *out, const v vec) {
-#if defined(__AVX2__)
+static ALWAYS_INLINE UNALIGNED_ACCESS void storeu_v(uint8_t *out, const v vec) {
+#if USE_AVX2
         _mm256_storeu_si256((__m256i *)out, vec.m256i);
-#elif defined(__SSE2__)
+#elif USE_SSE2
         _mm_storeu_si128((__m128i *)out, vec.m128i);
 #else
         memcpy(out, &vec.u64, sizeof(vec.u64));
 #endif
 }
 
-static ALWAYS_INLINE void store_v(uint8_t *out, const v vec) {
-#if defined(__AVX2__)
+static ALWAYS_INLINE ALIGNED_ACCESS void store_v(uint8_t *out, const v vec) {
+#if USE_AVX2
         _mm256_store_si256((__m256i *)out, vec.m256i);
-#elif defined(__SSE2__)
+#elif USE_SSE2
         _mm_store_si128((__m128i *)out, vec.m128i);
-#elif defined(__ARM_NEON__)
+#elif USE_ARM_NEON
         vst1q_u8(out, vec.uint8x16);
-#elif defined(__ALTIVEC__)
+#elif USE_ALTIVEC
         vec_st(vec.uint8x16, 0, out);
 #else
         storeu_v(out, vec);
@@ -285,7 +339,7 @@ static ALWAYS_INLINE void store_v(uint8_t *out, const v vec) {
 }
 
 static ALWAYS_INLINE CONST_FUNCTION v replicate_v128_v(const v128 vec) {
-#if defined(__AVX2__)
+#if USE_AVX2
         const v256 result = { .m256i = _mm256_broadcastsi128_si256(vec.m128i) };
 #else
         const v128 result = vec;
@@ -410,17 +464,15 @@ static ALWAYS_INLINE PROTO_RETURN reedsolomon_gal_mul_impl(
 
         size_t done = 0;
 
-#ifndef __AVX2__
-        /* Assume in and out are 16-byte aligned */
+#if USE_ALIGNED_ACCESS
 # define LOAD(addr) load_v(addr)
 # define STORE(addr, vec) store_v(addr, vec)
 #else
-        /* Not necessarily 32-byte aligned... Use unaligned access ops */
 # define LOAD(addr) loadu_v(addr)
 # define STORE(addr, vec) storeu_v(addr, vec)
 #endif
 
-#ifdef __clang__
+#if RS_HAVE_CLANG_LOOP_UNROLL
 # pragma clang loop unroll(enable)
 #endif
         for(size_t x = 0; x < len / sizeof(v); x++) {

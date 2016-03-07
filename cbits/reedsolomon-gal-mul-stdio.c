@@ -31,6 +31,21 @@
 
 #include "reedsolomon.h"
 
+#ifndef PRIsize_t
+# ifdef _WIN32
+#  define PRIsize_t "I"
+# else
+#  define PRIsize_t "z"
+# endif
+#endif
+#ifndef SCNsize_t
+# ifdef _WIN32
+#  define SCNsize_t "I"
+# else
+#  define SCNsize_t "z"
+# endif
+#endif
+
 int read_all(const int fd, uint8_t *vec, size_t count) {
         ssize_t rc = 0;
 
@@ -83,7 +98,7 @@ int main(int argc, char **argv) {
                 goto out;
         }
 
-        rc = sscanf(argv[1], "%zu", &size);
+        rc = sscanf(argv[1], "%" SCNsize_t "u", &size);
         if(rc == EOF) {
                 perror("sscanf");
                 rc = 1;
@@ -124,7 +139,7 @@ int main(int argc, char **argv) {
 
         cnt = reedsolomon_gal_mul(low_vector, high_vector, data, out, size);
         if(cnt != size) {
-                fprintf(stderr, "Count mismatch: size=%zu, cnt=%zu\n", size, cnt);
+                fprintf(stderr, "Count mismatch: size=%" PRIsize_t "u, cnt=%" PRIsize_t "u\n", size, cnt);
                 rc = 1;
                 goto out;
         }

@@ -1,7 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CFLAGS = -fPIC
-
 libreedsolomon_a_SOURCES = reedsolomon_dispatch.c \
 		           reedsolomon.h
 noinst_LIBRARIES = libreedsolomon.a
