@@ -28,7 +28,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
 #if defined(__SSE2__) && __SSE2__ && defined(HAVE_EMMINTRIN_H) && HAVE_EMMINTRIN_H
 # define USE_SSE2 1
