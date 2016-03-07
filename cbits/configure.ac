@@ -148,6 +148,30 @@ AC_CHECK_HEADERS([immintrin.h])
 CPPFLAGS=$rs_simd_headers_save_flags
 
 AC_CHECK_HEADERS([arm_neon.h], [rs_neon=1], [rs_neon=0])
+# Figure out whether we have vqtbl1q_u8 support
+AC_CACHE_CHECK([whether vqtbl1q_u8 works], [rs_cv_vqtbl1q_u8_works],
+    [AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+                #include <arm_neon.h>
+            ]], [[
+                const uint8x16_t tab = vdupq_n_u8(1),
+                                 idx = vdupq_n_u8(2),
+                                 result = vqtbl1q_u8(tab, idx);
+
+                (void)result;
+            ]])],
+            [rs_cv_vqtbl1q_u8_works=yes],
+            [rs_cv_vqtbl1q_u8_works=no])])
+if test x$rs_cv_vqtbl1q_u8_works = xyes; then
+    rs_have_vqtbl1q_u8=1
+else
+    rs_have_vqtbl1q_u8=0
+fi
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_VQTBL1Q_U8],
+    [$rs_have_vqtbl1q_u8],
+    [Define to 1 if vqtbl1q_u8 works])
+
 AC_CHECK_HEADERS([altivec.h], [rs_altivec=1], [rs_altivec=0])
 # Figure out whether we have POWER8 support
 AC_CACHE_CHECK([whether vec_vsrd works], [rs_cv_vec_vsrd_works],
@@ -249,7 +273,11 @@ if test x$rs_avx2 = x1; then
     rs_backends="$rs_backends, avx2"
 fi
 if test x$rs_neon = x1; then
-    rs_backends="$rs_backends, neon"
+    if test x$rs_have_vqtbl1q_u8 = x1; then
+        rs_backends="$rs_backends, neon (AARCH64)"
+    else
+        rs_backends="$rs_backends, neon"
+    fi
 fi
 if test x$rs_altivec = x1; then
     if test x$rs_have_vec_vsrd = x1; then

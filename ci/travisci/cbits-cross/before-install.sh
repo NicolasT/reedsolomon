@@ -1,6 +1,7 @@
 #!/bin/bash -xue
 
-sudo apt-get -y install libc6-ppc64el-cross libc6-dev-ppc64el-cross
+sudo apt-get -y install libc6-ppc64el-cross libc6-dev-ppc64el-cross \
+                        libc6-arm64-cross libc6-dev-arm64-cross
 
 mkdir -p $LOCAL_BIN
 

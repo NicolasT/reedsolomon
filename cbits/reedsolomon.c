@@ -55,7 +55,10 @@
 # define USE_AVX2 0
 #endif
 
-#if defined(__ARM_NEON__) && __ARM_NEON__ && defined(HAVE_ARM_NEON_H) && HAVE_ARM_NEON_H
+#if ((defined(__ARM_NEON__) && __ARM_NEON__) \
+        || (defined(__ARM_NEON) && __ARM_NEON) \
+        || (defined(__aarch64__) && __aarch64__)) \
+    && defined(HAVE_ARM_NEON_H) && HAVE_ARM_NEON_H
 # define USE_ARM_NEON 1
 #undef VECTOR_SIZE
 # define VECTOR_SIZE 16
@@ -289,6 +292,9 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
 #elif USE_SSSE3
         const v128 result = { .m128i = _mm_shuffle_epi8(vec.m128i, mask.m128i) };
 #elif USE_ARM_NEON
+# if defined(RS_HAVE_VQTBL1Q_U8) && RS_HAVE_VQTBL1Q_U8
+        const v128 result = { .uint8x16 = vqtbl1q_u8(vec.uint8x16, mask.uint8x16) };
+# else
         /* There's no NEON instruction mapping 1-to-1 to _mm_shuffle_epi8, but
          * this should have the same result...
          */
@@ -296,6 +302,8 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
                                                                vget_low_u8(mask.uint8x16)),
                                                       vtbl2_u8(vec.uint8x8x2,
                                                                vget_high_u8(mask.uint8x16))) };
+
+# endif
 #elif USE_ALTIVEC
         const v128 zeros = set1_epi8_v(0),
                    result = { .uint8x16 = vec_perm(vec.uint8x16, zeros.uint8x16, mask.uint8x16) };

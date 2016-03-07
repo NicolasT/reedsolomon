@@ -49,6 +49,9 @@ addons:
       - gcc-powerpc64le-linux-gnu
       - cabal-install-1.22
       - ghc-7.10.3
+      - gcc-aarch64-linux-gnu
+      - libc6-arm64-cross
+      - libc6-dev-arm64-cross
 
 before_install:
   - ci/step.sh travisci before-install
