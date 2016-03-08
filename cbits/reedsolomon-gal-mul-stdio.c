@@ -29,17 +29,25 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#if defined(_WIN32) && _WIN32
+# define USE_WIN32 1
+# include <io.h>
+# include <fcntl.h>
+#else
+# define USE_WIN32 0
+#endif
+
 #include "reedsolomon.h"
 
 #ifndef PRIsize_t
-# ifdef _WIN32
+# if USE_WIN32
 #  define PRIsize_t "I"
 # else
 #  define PRIsize_t "z"
 # endif
 #endif
 #ifndef SCNsize_t
-# ifdef _WIN32
+# if USE_WIN32
 #  define SCNsize_t "I"
 # else
 #  define SCNsize_t "z"
@@ -104,6 +112,22 @@ int main(int argc, char **argv) {
                 rc = 1;
                 goto out;
         }
+
+#if USE_WIN32
+        rc = _setmode(STDIN_FILENO, _O_BINARY);
+        if(rc == -1) {
+                perror("_setmode");
+                rc = 1;
+                goto out;
+        }
+
+        rc = _setmode(STDOUT_FILENO, _O_BINARY);
+        if(rc == -1) {
+                perror("_setmode");
+                rc = 1;
+                goto out;
+        }
+#endif
 
         rc = read_all(STDIN_FILENO, low_vector, sizeof(low_vector));
         if(rc != 0) {
