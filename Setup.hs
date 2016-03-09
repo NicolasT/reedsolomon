@@ -101,7 +101,6 @@ customBuildHook innerHook packageDescription@PackageDescription{..} localBuildIn
                         _ -> ["--disable-maintainer-mode"]
                     fromWindows = map (\c -> if c == '\\' then '/' else c)
                 rawSystemExit verbosity "sh" $ [ fromWindows configure
-                                               , "--with-pic"
                                                ] ++ libOptions
 
         rawSystemExit verbosity "make" ["-C", cbitsBuildDir, "--no-print-directory"]
