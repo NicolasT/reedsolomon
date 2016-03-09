@@ -8,10 +8,11 @@ function build_for_arch() {
     local backend=$1
     shift
     local cflags=${1:-}
+    local exec_suffix=${2:-}
 
     PATH=~/x-tools/$isa/bin:$PATH ./configure --host=$isa CFLAGS="$cflags"
-    PATH=~/x-tools/$isa/bin:$PATH make reedsolomon-gal-mul-stdio
-    mv reedsolomon-gal-mul-stdio reedsolomon-gal-mul-stdio-$isa-$backend
+    PATH=~/x-tools/$isa/bin:$PATH make reedsolomon-gal-mul-stdio${exec_suffix}
+    mv reedsolomon-gal-mul-stdio${exec_suffix} reedsolomon-gal-mul-stdio-$isa-$backend${exec_suffix}
     make clean
 }
 
@@ -33,6 +34,17 @@ function test_arch() {
     echo
 }
 
+function test_wine() {
+    local isa=$1
+
+    echo "Validating $isa with Wine"
+    WINEDEBUG=fixme-all \
+        stack runhaskell reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+            ./reedsolomon-gal-mul-stdio-$HOST_ISA-native \
+            "wine ./reedsolomon-gal-mul-stdio-$isa-generic.exe"
+    echo
+}
+
 build_for_arch $HOST_ISA native
 build_for_arch armv7-rpi2-linux-gnueabihf generic '-mfpu=vfp'
 build_for_arch armv7-rpi2-linux-gnueabihf neon '-mfpu=neon'
@@ -41,6 +53,8 @@ build_for_arch powerpc64-unknown-linux-gnu generic '-static'
 build_for_arch powerpc64-unknown-linux-gnu altivec '-static -maltivec'
 build_for_arch powerpc64-unknown-linux-gnu altivec-power8 '-static -mcpu=power8'
 build_for_arch aarch64-unknown-linux-musleabi generic '-static'
+build_for_arch i686-w64-mingw32 generic '' '.exe'
+build_for_arch x86_64-w64-mingw32 generic '' '.exe'
 
 test_arch arm armv7-rpi2-linux-gnueabihf generic
 test_arch arm armv7-rpi2-linux-gnueabihf neon
@@ -48,3 +62,5 @@ test_arch ppc64 powerpc64-unknown-linux-gnu generic
 test_arch ppc64 powerpc64-unknown-linux-gnu altivec
 test_arch ppc64 powerpc64-unknown-linux-gnu altivec-power8 POWER8
 test_arch aarch64 aarch64-unknown-linux-musleabi generic
+test_wine i686-w64-mingw32
+test_wine x86_64-w64-mingw32

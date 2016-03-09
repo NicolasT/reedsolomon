@@ -6,6 +6,8 @@ function build() {
     local host=$1
     shift
     local cflags=$1
+    shift
+    local exec_suffix=$1
 
     set +e
     ./configure --host=${host} CFLAGS=${cflags}
@@ -19,7 +21,7 @@ function build() {
 
     make V=1
 
-    mv reedsolomon-gal-mul-stdio reedsolomon-gal-mul-stdio-$suffix
+    mv reedsolomon-gal-mul-stdio${exec_suffix} reedsolomon-gal-mul-stdio-${suffix}${exec_suffix}
 
     make distclean
 }
@@ -29,13 +31,15 @@ cd cbits
 
 HOST_ISA=`uname -p`
 
-build $HOST_ISA '' ''
-build arm arm-linux-gnueabihf ''
-build arm-neon arm-linux-gnueabihf '-mfpu=neon'
-build ppc64le powerpc64le-linux-gnu '-mno-altivec'
-build ppc64le-altivec powerpc64le-linux-gnu '-maltivec'
-build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8'
-build aarch64 aarch64-linux-gnu ''
+build $HOST_ISA '' '' ''
+build arm arm-linux-gnueabihf '' ''
+build arm-neon arm-linux-gnueabihf '-mfpu=neon' ''
+build ppc64le powerpc64le-linux-gnu '-mno-altivec' ''
+build ppc64le-altivec powerpc64le-linux-gnu '-maltivec' ''
+build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8' ''
+build aarch64 aarch64-linux-gnu '' ''
+build x86_64-w64-mingw32 x86_64-w64-mingw32 '' '.exe'
+build i686-w64-mingw32 i686-w64-mingw32 '' '.exe'
 
 stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \

@@ -1,7 +1,8 @@
 #!/bin/bash -xue
 
 sudo apt-get -y install libc6-ppc64el-cross libc6-dev-ppc64el-cross \
-                        libc6-arm64-cross libc6-dev-arm64-cross
+                        libc6-arm64-cross libc6-dev-arm64-cross \
+                        gcc-mingw-w64-i686 gcc-mingw-w64-x86-64
 
 mkdir -p $LOCAL_BIN
 
