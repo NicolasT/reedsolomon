@@ -17,6 +17,8 @@
 > import Data.Word (Word8)
 #if HAVE_SIMD
 > import Foreign.C (CSize(..))
+> import qualified Foreign.ForeignPtr.Unsafe as FP
+> import qualified Foreign.Ptr as Ptr
 > import GHC.TypeLits (KnownNat)
 > import System.IO.Unsafe (unsafePerformIO)
 #endif
@@ -398,6 +400,16 @@ func TestGalois(t *testing.T) {
 #if RS_HAVE_ALTIVEC
 > foreign import ccall unsafe "reedsolomon_gal_mul_altivec" c_rgm_altivec :: CProto
 #endif
+>
+> alignmentProperty :: [Word8] -> Bool
+> alignmentProperty = (\ptr -> ptr `rem` 16 == 0)
+>                     . vectorAddress
+>                     . SV.fromList
+>   where
+>     vectorAddress = Ptr.ptrToWordPtr . FP.unsafeForeignPtrToPtr
+>                                      . fst
+>                                      . SV.unsafeToForeignPtr0
+>
 #endif
 
 > tests :: TestTree
@@ -449,6 +461,7 @@ func TestGalois(t *testing.T) {
 #endif
 >                       []
 >                 ]
+>           , testProperty "alignment" alignmentProperty
 >           ]
 #endif
 >     ]
