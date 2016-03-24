@@ -159,8 +159,8 @@ type reedSolomon struct {
 }
 
 > -- | A Reed-Solomon encoder.
-> data Encoder = Encoder { rsDataShards :: Int
->                        , rsParityShards :: Int
+> data Encoder = Encoder { rsDataShards :: {-# UNPACK #-} !Int
+>                        , rsParityShards :: {-# UNPACK #-} !Int
 >                        , rsM :: Matrix
 >                        }
 >   deriving (Show, Eq, Typeable)
