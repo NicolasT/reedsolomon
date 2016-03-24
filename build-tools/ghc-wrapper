@@ -6,6 +6,12 @@ set +e
 # The `tr` below turns Windows path separators into Unix ones for the `grep` to
 # succeed.
 echo $@ | tr '\\' '/' | grep "Data/ReedSolomon/Galois/SIMD\.[a-z_]*o" > /dev/null 2>&1
+RC1=$?
+# Detect GHCi mode (to support `cabal repl`)
+echo $@ | grep \\-\\-interactive > /dev/null 2>&1
+RC2=$?
+
+test ${RC1} -eq 0 -o ${RC2} -eq 0
 RC=$?
 set -e
 

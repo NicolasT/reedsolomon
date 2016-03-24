@@ -26,6 +26,7 @@ main = defaultMainWithHooks customHooks
     customHooks = simpleUserHooks { confHook = customConfHook (confHook simpleUserHooks)
                                   , buildHook = customBuildHook (buildHook simpleUserHooks)
                                   , preSDist = customPreSDist (preSDist simpleUserHooks)
+                                  , replHook = customReplHook (replHook simpleUserHooks)
                                   }
 
 customConfHook :: (a -> b -> IO LocalBuildInfo)
@@ -66,15 +67,9 @@ customConfHook innerHook a b = do
                                     UserSpecified path -> path
                                     FoundOnSystem path -> path
 
-customBuildHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> BuildFlags -> IO ())
-                -> PackageDescription
-                -> LocalBuildInfo
-                -> UserHooks
-                -> BuildFlags
-                -> IO ()
-customBuildHook innerHook packageDescription@PackageDescription{..} localBuildInfo@LocalBuildInfo{..} userHooks buildFlags = do
+buildCbits :: PackageDescription -> LocalBuildInfo -> Verbosity -> IO PackageDescription
+buildCbits packageDescription@PackageDescription{..} localBuildInfo@LocalBuildInfo{..} verbosity = do
     let wantSIMD = fromMaybe True $ lookup (FlagName "simd") $ configConfigurationsFlags configFlags
-        verbosity = fromFlag $ buildVerbosity buildFlags
         version = pkgVersion package
 
     root <- makeAbsolute =<< getCurrentDirectory
@@ -110,6 +105,17 @@ customBuildHook innerHook packageDescription@PackageDescription{..} localBuildIn
                                 then mapBuildInfo addIncludeDir packageDescription
                                 else packageDescription
 
+    return packageDescription'
+
+customBuildHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> BuildFlags -> IO ())
+                -> PackageDescription
+                -> LocalBuildInfo
+                -> UserHooks
+                -> BuildFlags
+                -> IO ()
+customBuildHook innerHook packageDescription localBuildInfo userHooks buildFlags = do
+    let verbosity = fromFlag $ buildVerbosity buildFlags
+    packageDescription' <- buildCbits packageDescription localBuildInfo verbosity
     innerHook packageDescription' localBuildInfo userHooks buildFlags
 
 mapBuildInfo :: (BuildInfo -> BuildInfo) -> PackageDescription -> PackageDescription
@@ -149,3 +155,15 @@ customPreSDist innerHook args flags = do
         rawSystemExit verbosity "autoreconf" ["-f", "-i"]
 
     return hookedBuildInfo
+
+customReplHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> ReplFlags -> [String] -> IO ())
+               -> PackageDescription
+               -> LocalBuildInfo
+               -> UserHooks
+               -> ReplFlags
+               -> [String]
+               -> IO ()
+customReplHook innerHook packageDescription localBuildInfo userHooks replFlags args = do
+    let verbosity = fromFlag $ replVerbosity replFlags
+    packageDescription' <- buildCbits packageDescription localBuildInfo verbosity
+    innerHook packageDescription' localBuildInfo userHooks replFlags args
