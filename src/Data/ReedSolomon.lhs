@@ -159,13 +159,17 @@ type reedSolomon struct {
 }
 
 > -- | A Reed-Solomon encoder.
-> data Encoder = Encoder { rsDataShards :: Int
->                        , rsParityShards :: Int
->                        , rsShards :: Int
+> data Encoder = Encoder { rsDataShards :: {-# UNPACK #-} !Int
+>                        , rsParityShards :: {-# UNPACK #-} !Int
 >                        , rsM :: Matrix
->                        , rsParity :: Matrix
 >                        }
 >   deriving (Show, Eq, Typeable)
+>
+> rsShards :: Encoder -> Int
+> rsShards enc = rsDataShards enc + rsParityShards enc
+>
+> rsParity :: Encoder -> Matrix
+> rsParity enc = V.drop (rsDataShards enc) (rsM enc)
 
 > type MMatrix s = V.Vector (SV.MVector s Word8)
 
@@ -251,13 +255,9 @@ func New(dataShards, parityShards int) (Encoder, error) {
 >         top' <- Matrix.invert top
 >         m <- Matrix.multiply vm top'
 >
->         let parity = V.drop dataShards m
->
 >         return $ Encoder { rsDataShards = dataShards
 >                          , rsParityShards = parityShards
->                          , rsShards = shards
 >                          , rsM = m
->                          , rsParity = parity
 >                          }
 
 // ErrTooFewShards is returned if too few shards where given to
