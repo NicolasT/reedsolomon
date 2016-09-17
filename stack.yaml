@@ -1,4 +1,7 @@
 packages:
 - '.'
 
+extra-deps:
+- bytestring-mmap-0.2.2
+
 resolver: lts-5.3

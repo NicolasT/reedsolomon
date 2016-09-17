@@ -1,4 +1,5 @@
 > {-# LANGUAGE DataKinds #-}
+
 > module Data.ReedSolomon.Galois.SIMD (
 >       galMulSlice
 >     , galMulSliceXor
