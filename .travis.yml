@@ -13,11 +13,15 @@ matrix:
     - env: SUITE=build-test-bench RESOLVER=lts-3 LLVM_VERSION=3.5
     # Stackage lts-5 uses GHC-7.10.3 which relies on LLVM 3.5
     - env: SUITE=build-test-bench RESOLVER=lts-5 LLVM_VERSION=3.5
-    # Current nightly uses GHC 7.10.x
-    - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.5
-    - env: SUITE=build-test-bench RESOLVER=lts-5
+    # Stackage lts-6 uses GHC-7.10.3 which relies on LLVM 3.5
+    - env: SUITE=build-test-bench RESOLVER=lts-6 LLVM_VERSION=3.5
+    # Stackage lts-7 uses GHC-8.0.1 which relies on LLVM 3.7
+    - env: SUITE=build-test-bench RESOLVER=lts-7 LLVM_VERSION=3.7
+    # Current nightly uses GHC 8.0.x
+    - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.7
+    - env: SUITE=build-test-bench RESOLVER=lts-7
       os: osx
-    - env: SUITE=cbits-cross RESOLVER=lts-5
+    - env: SUITE=cbits-cross RESOLVER=lts-7
     - env: SUITE=check-sdist
 
 sudo: required
@@ -32,16 +36,20 @@ addons:
   apt:
     sources:
       - llvm-toolchain-precise-3.5
+      - llvm-toolchain-precise-3.7
       - ubuntu-toolchain-r-test
       - hvr-ghc
     packages:
       - libgmp-dev
       - llvm-3.4
       - llvm-3.5
+      - llvm-3.7
       - llvm-3.4-runtime
       - llvm-3.5-runtime
+      - llvm-3.7-runtime
       - libllvm3.4
       - libllvm3.5
+      - libllvm3.7
       - qemu-user-static
       - gcc-arm-linux-gnueabihf
       - libc6-armhf-cross
