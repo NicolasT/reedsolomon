@@ -82,7 +82,15 @@ mkToolInfo = ToolInfo{..}
 #endif
 
 #ifdef __GLASGOW_HASKELL_LLVM__
+# if __GLASGOW_HASKELL__ == 800 && __GLASGOW_HASKELL_PATCHLEVEL1__ == 1
+    -- GHC 8.0.1 has a tuple as value of __GLASGOW_HASKELL_LLVM__, not
+    -- a plain Int, due to some changes in 29310b62 and the usage of `show`
+    -- Unless this becomes 'official API', treat it as a version-specific
+    -- mistake
+    toolLLVM = let (major, minor) = __GLASGOW_HASKELL_LLVM__ in Just (10 * major + minor)
+# else
     toolLLVM = Just  __GLASGOW_HASKELL_LLVM__
+# endif
 #else
     toolLLVM = Nothing
 #endif
