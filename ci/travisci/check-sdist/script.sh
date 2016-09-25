@@ -35,7 +35,7 @@ diff -Nur cbits/reedsolomon-$PKG_VERSION haskell/reedsolomon-$PKG_VERSION/cbits 
     tee diffs
 test x`wc -l < diffs` = x0
 
-cabal install -f-LLVM $PKG_TAR
+cabal install --enable-documentation -f-LLVM $PKG_TAR
 
 cat test.hs
 
