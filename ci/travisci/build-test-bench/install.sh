@@ -17,4 +17,5 @@ stack \
     --test \
     --bench \
     --only-snapshot \
-    --resolver=$RESOLVER
+    --resolver=$RESOLVER \
+    --haddock

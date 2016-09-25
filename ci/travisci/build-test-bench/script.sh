@@ -10,6 +10,7 @@ stack --no-terminal build \
         --bench \
         --no-run-benchmarks \
         --resolver=$RESOLVER \
+        --haddock \
         ${STACK_BUILD_OPTIONS[*]:-}
 
 stack --resolver=$RESOLVER clean
@@ -22,6 +23,7 @@ stack --no-terminal build \
         --test-arguments "+RTS -N2" \
         --bench \
         --resolver=$RESOLVER \
+        --haddock \
         ${STACK_BUILD_OPTIONS[*]:-}
 
 stack --resolver=$RESOLVER exec reedsolomon-simple-bench 5 2 $(( 5 * 1024 * 1024 ))

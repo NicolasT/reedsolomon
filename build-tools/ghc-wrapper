@@ -10,7 +10,7 @@ RC=$?
 set -e
 
 set +e
-$1 --version | grep 'version 8'
+$1 --version | grep 'version 8' > /dev/null 2>&1
 GHC8=$?
 set -e
 
