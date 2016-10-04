@@ -40,24 +40,28 @@ customConfHook innerHook a b = do
     let cabalBuildDir = buildDir localBuildInfo
         sh = "sh"
 
-        Just ar = Db.lookupProgram arProgram (withPrograms localBuildInfo)
-        arLocation = resolveProgramLocation ar
-        arWrapperPath = root </> "build-tools" </> "ar-wrapper"
-        arWrapper = ar { programDefaultArgs = arWrapperPath : arLocation : programDefaultArgs ar
-                       , programLocation = UserSpecified sh
-                       , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ar
-                       }
+        updateAr = case Db.lookupProgram arProgram (withPrograms localBuildInfo) of
+            Just ar -> let arLocation = resolveProgramLocation ar in
+                       let arWrapperPath = root </> "build-tools" </> "ar-wrapper" in
+                       let arWrapper = ar { programDefaultArgs = arWrapperPath : arLocation : programDefaultArgs ar
+                                          , programLocation = UserSpecified sh
+                                          , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ar
+                                          } in
+                       Db.updateProgram arWrapper
+            Nothing -> id
 
-        Just ghc = Db.lookupProgram ghcProgram (withPrograms localBuildInfo)
-        ghcLocation = resolveProgramLocation ghc
-        ghcWrapperPath = root </> "build-tools" </> "ghc-wrapper"
-        ghcWrapper = ghc { programDefaultArgs = ghcWrapperPath : ghcLocation : programDefaultArgs ghc
-                         , programLocation = UserSpecified sh
-                         , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ghc
-                         }
+        updateGhc = case Db.lookupProgram ghcProgram (withPrograms localBuildInfo) of
+            Just ghc -> let ghcLocation = resolveProgramLocation ghc in
+                        let ghcWrapperPath = root </> "build-tools" </> "ghc-wrapper" in
+                        let ghcWrapper = ghc { programDefaultArgs = ghcWrapperPath : ghcLocation : programDefaultArgs ghc
+                                             , programLocation = UserSpecified sh
+                                             , programOverrideEnv = ("CABAL_BUILD_DIR", Just cabalBuildDir) : programOverrideEnv ghc
+                                             } in
+                        Db.updateProgram ghcWrapper
+            Nothing -> id
 
-        withPrograms' = Db.updateProgram arWrapper $
-                            Db.updateProgram ghcWrapper $
+        withPrograms' = updateAr $
+                            updateGhc $
                             withPrograms localBuildInfo
 
     return localBuildInfo { withPrograms = withPrograms' }
