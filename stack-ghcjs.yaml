@@ -1,0 +1,24 @@
+packages:
+- location: .
+- location:
+    git: https://github.com/NicolasT/tasty.git
+    commit: 9d61d38362937cb596de4fc98180bc4ee231250a
+  subdirs:
+  - core
+  extra-dep: true
+
+flags:
+  reedsolomon:
+    SIMD: false
+    LLVM: false
+
+resolver: lts-6.20
+compiler: ghcjs-0.2.0.9006020_ghc-7.10.3
+compiler-check: match-exact
+
+setup-info:
+  ghcjs:
+    source:
+      ghcjs-0.2.0.9006020_ghc-7.10.3:
+        url: http://ghcjs.tolysz.org/lts-6.20-9006020.tar.gz
+        sha1: a6cea90cd8121eee3afb201183c6e9bd6bacd94a
