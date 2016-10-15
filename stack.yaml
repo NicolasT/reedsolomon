@@ -3,5 +3,6 @@ packages:
 
 extra-deps:
 - bytestring-mmap-0.2.2
+- OpenCL-1.0.3.4
 
 resolver: lts-7.0

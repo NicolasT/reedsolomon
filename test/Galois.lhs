@@ -29,7 +29,7 @@
 > import qualified Data.Vector.Generic.Mutable as MV
 > import qualified Data.Vector.Storable as SV
 >
-> import Test.Tasty (TestTree, testGroup)
+> import Test.Tasty (TestTree, testGroup, withResource)
 > import Test.Tasty.HUnit (Assertion, (@?=), testCase)
 #if HAVE_SIMD
 > import Test.Tasty.QuickCheck (Property, (==>), testProperty)
@@ -49,6 +49,12 @@
 #if HAVE_SIMD
 > import qualified Data.ReedSolomon.Galois.SIMD as SIMD
 #endif
+
+> import Test.QuickCheck.Monadic
+> import Data.ReedSolomon.Galois.SIMD (galMulSlice)
+> import Control.Parallel.OpenCL
+> import Data.ReedSolomon.Galois.OpenCL
+> import qualified Data.Vector.Storable.Mutable as SMV
 
 /**
  * Unit tests for Galois
@@ -462,6 +468,7 @@ func TestGalois(t *testing.T) {
 >                       []
 >                 ]
 >           , testProperty "alignment" alignmentProperty
+>           , testOpenCL
 >           ]
 #endif
 >     ]
@@ -470,3 +477,35 @@ func TestGalois(t *testing.T) {
 >     level = unsafePerformIO RS.simdInstructions
 >     dependOn l prop = maybe Nothing (\lvl -> if l <= lvl then Just prop else Nothing) level
 #endif
+
+> testOpenCL = withResource mkProgram (\_ -> return ()) mkTree
+>   where
+>     mkProgram :: IO (Word8 -> SV.Vector Word8 -> SMV.IOVector Word8 -> IO ())
+>     mkProgram = do
+>         (platform:_) <- clGetPlatformIDs
+>         (dev:_) <- clGetDeviceIDs platform CL_DEVICE_TYPE_ALL
+>         context <- clCreateContext [CL_CONTEXT_PLATFORM platform] [dev] print
+>         q <- clCreateCommandQueue context dev []
+>         buildProgram dev context q
+>
+>     mkTree act =
+>         testGroup "OpenCL" [
+>             testProperty "foo" (fooProperty act)
+>         ]
+>     fooProperty :: IO (Word8 -> SV.Vector Word8 -> SMV.IOVector Word8 -> IO ())
+>                 -> QC.Positive Int
+>                 -> Word8
+>                 -> Property
+>     fooProperty act cnt c = monadicIO $ do
+>         in_ <- SV.fromList <$> pick (QC.vectorOf (QC.getPositive cnt * 16) QC.arbitrary)
+>
+>         (v1, v2) <- run $ do
+>             fn <- act
+>             out1 <- MV.new (V.length in_)
+>             out2 <- MV.new (V.length in_)
+>             fn c in_ out1
+>             galMulSlice c in_ out2
+>             v1 <- SV.unsafeFreeze out1
+>             v2 <- SV.unsafeFreeze out2
+>             return (v1, v2)
+>         assert (v1 == v2)

@@ -55,6 +55,11 @@ Flag SIMD
   Default:      True
   Manual:       True
 
+Flag OpenCL
+  Description:  Enable OpenCL Galois field calculation routines
+  Default:      False
+  Manual:       True
+
 Flag LLVM
   Description:  Enable LLVM compilation
   Default:      True
@@ -99,6 +104,11 @@ Library
   if flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.SIMD
     Cpp-Options:       -DHAVE_SIMD=1
+  if flag(OpenCL)
+    Other-Modules:     Data.ReedSolomon.Galois.OpenCL
+    Build-Depends:     heredoc >= 0.2 && < 0.3
+                     , OpenCL >= 1.0 && < 1.1
+    Cpp-Options:       -DHAVE_OPENCL=1
   if flag(LLVM)
     Ghc-Options:       -fllvm
     Cpp-Options:       -DHAVE_LLVM=1
@@ -210,6 +220,8 @@ Test-Suite reedsolomon-test
                      , tasty-ant-xml >= 1.0 && < 1.1
                      , QuickCheck >= 2.7 && < 2.10
                      , random >= 1.1 && < 1.2
+                     , OpenCL
+                     , heredoc
                      , reedsolomon
   Default-Language:    Haskell2010
   Ghc-Options:         -threaded -rtsopts -with-rtsopts=-N -Wall -Odph
