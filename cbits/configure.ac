@@ -103,6 +103,55 @@ AX_CHECK_COMPILE_FLAG([-mavx], [rs_avx=1], [rs_avx=0])
 AX_CHECK_COMPILE_FLAG([-mavx2], [rs_avx2=1], [rs_avx2=0])
 
 ## Checks for compiler-specific features
+AC_MSG_CHECKING([whether C compiler supports __builtin_shuffle])
+AC_RUN_IFELSE(
+    [AC_LANG_PROGRAM(
+        [
+            #include <stdint.h>
+
+            typedef uint8_t v16u8v __attribute__((vector_size(16)));
+        ],
+        [[
+            v16u8v v1 = { 0, 1,  2,  3,  4,  5,  6,  7
+                        , 8, 9, 10, 11, 12, 13, 14, 15 },
+                   v2 = { 0, 0, 0, 0, 0, 0, 0, 0
+                        , 0, 0, 0, 0, 0, 0, 0, 0 },
+                   mask = {  0, 20,  4, 24,  8, 28, 12, 32
+                          , 18,  2, 22,  6, 26, 10, 30, 16 },
+                   result = __builtin_shuffle(v1, v2, mask),
+                   expected = { 0, 0, 4, 0, 8,  0, 12, 0
+                              , 0, 2, 0, 6, 0, 10,  0, 0 };
+
+            int equal =    result[0] == expected[0]
+                        && result[1] == expected[1]
+                        && result[2] == expected[2]
+                        && result[3] == expected[3]
+                        && result[4] == expected[4]
+                        && result[5] == expected[5]
+                        && result[6] == expected[6]
+                        && result[7] == expected[7]
+                        && result[8] == expected[8]
+                        && result[9] == expected[9]
+                        && result[10] == expected[10]
+                        && result[11] == expected[11]
+                        && result[12] == expected[12]
+                        && result[13] == expected[13]
+                        && result[14] == expected[14]
+                        && result[15] == expected[15];
+
+            return equal ? 0 : 1;
+        ]])],
+    [AC_MSG_RESULT([yes])
+     rs_have_builtin_shuffle=1],
+    [AC_MSG_RESULT([no])
+     rs_have_builtin_shuffle=0],
+    [AC_MSG_RESULT([no (assumed, cross-compiling)])
+     rs_have_builtin_shuffle=0])
+AC_DEFINE_UNQUOTED(
+    [RS_HAVE_BUILTIN_SHUFFLE],
+    [$rs_have_builtin_shuffle],
+    [Define to 1 if C compiller supports __builtin_shuffle])
+
 AC_MSG_CHECKING([whether Clang's `loop unroll` pragma works])
 AC_COMPILE_IFELSE(
     [AC_LANG_PROGRAM(
@@ -259,10 +308,18 @@ AC_OUTPUT
 
 rs_backends=""
 if test x$rs_generic = x1; then
-    rs_backends="$rs_backends, generic"
+    if test x$rs_have_builtin_shuffle = x1; then
+        rs_backends="$rs_backends, generic (__builtin_shuffle)"
+    else
+        rs_backends="$rs_backends, generic"
+    fi
 fi
 if test x$rs_sse2 = x1; then
-    rs_backends="$rs_backends, sse2"
+    if test x$rs_have_builtin_shuffle = x1; then
+        rs_backends="$rs_backends, sse2 (__builtin_shuffle)"
+    else
+        rs_backends="$rs_backends, sse2"
+    fi
 fi
 if test x$rs_ssse3 = x1; then
     rs_backends="$rs_backends, ssse3"

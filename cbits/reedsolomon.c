@@ -306,6 +306,10 @@ static ALWAYS_INLINE CONST_FUNCTION v shuffle_epi8_v(const v vec, const v mask) 
 #elif USE_ALTIVEC
         const v128 zeros = set1_epi8_v(0),
                    result = { .uint8x16 = vec_perm(vec.uint8x16, zeros.uint8x16, mask.uint8x16) };
+#elif defined(RS_HAVE_BUILTIN_SHUFFLE) && RS_HAVE_BUILTIN_SHUFFLE
+        const v16u8v zeros = { 0, 0, 0, 0, 0, 0, 0, 0
+                             , 0, 0, 0, 0, 0, 0, 0, 0 };
+        const v128 result = { .v16u8 = __builtin_shuffle(vec.v16u8, zeros, mask.v16u8) };
 #else
         v128 result = { .u64 = { 0, 0 } };
 
