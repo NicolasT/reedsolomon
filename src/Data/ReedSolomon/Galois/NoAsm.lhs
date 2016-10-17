@@ -1,5 +1,6 @@
 > module Data.ReedSolomon.Galois.NoAsm (
->       galMulSlice
+>       backend
+>     , galMulSlice
 >     , galMulSliceXor
 >     ) where
 >
@@ -15,6 +16,7 @@
 > import qualified Data.Vector.Storable.Mutable as MV
 >
 > import qualified Data.Vector.Generic.Sized as S
+> import Data.ReedSolomon.Backend (Backend(..))
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
 
 //+build !amd64 noasm appengine
@@ -51,3 +53,9 @@ func galMulSliceXor(c byte, in, out []byte) {
 >         let input = V.unsafeIndex in_ n
 >         outn <- MV.unsafeRead out n
 >         MV.unsafeWrite out n (outn `xor` S.index mt input)
+
+> backend :: Backend s
+> backend = Backend { backendName = "NoAsm"
+>                   , backendGalMulSlice = galMulSlice
+>                   , backendGalMulSliceXor = galMulSliceXor
+>                   }

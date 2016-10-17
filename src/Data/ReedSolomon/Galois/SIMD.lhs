@@ -1,7 +1,8 @@
 > {-# LANGUAGE DataKinds #-}
 
 > module Data.ReedSolomon.Galois.SIMD (
->       galMulSlice
+>       backend
+>     , galMulSlice
 >     , galMulSliceXor
 >     , CProto
 >     , cProtoToPrim
@@ -22,6 +23,7 @@
 > import qualified Data.Vector.Storable.Mutable as MV
 >
 > import qualified Data.Vector.Generic.Sized as S
+> import Data.ReedSolomon.Backend (Backend(..))
 > import qualified Data.ReedSolomon.Galois.GenTables as GenTables
 
 //+build !noasm
@@ -139,3 +141,9 @@ func galMulSliceXor(c byte, in, out []byte) {
 
 > foreign import ccall unsafe "reedsolomon_gal_mul" c_reedsolomon_gal_mul :: CProto
 > foreign import ccall unsafe "reedsolomon_gal_mul_xor" c_reedsolomon_gal_mul_xor :: CProto
+
+> backend :: Backend s
+> backend = Backend { backendName = "SIMD"
+>                   , backendGalMulSlice = galMulSlice
+>                   , backendGalMulSliceXor = galMulSliceXor
+>                   }

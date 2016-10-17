@@ -172,7 +172,7 @@ func main() {
 >             (\e -> case fromException e of
 >                 Just RS.InvalidShardSize -> Just False
 >                 _ -> Nothing)
->             (RS.verify enc (V.map (fromMaybe V.empty) shards))
+>             (RS.verify RS.defaultBackend enc (V.map (fromMaybe V.empty) shards))
 >             return
 
 	if ok {
@@ -195,11 +195,11 @@ func main() {
 			os.Exit(1)
 		}
 
->         shards' <- RS.reconstruct enc shards
+>         shards' <- RS.reconstruct RS.defaultBackend enc shards
 
 		ok, err = enc.Verify(shards)
 
->         ok' <- RS.verify enc shards'
+>         ok' <- RS.verify RS.defaultBackend enc shards'
 
 		if !ok {
 			fmt.Println("Verification failed after reconstruction, data likely corrupted.")

@@ -65,7 +65,7 @@ go enc shards = loop
   where
     loop n | n == 0 = return ()
            | otherwise = do
-                parities <- force `fmap` RS.encode enc shards
+                parities <- force `fmap` RS.encode RS.defaultBackend enc shards
                 parities `seq` loop (n - 1)
 
 makeVector :: (SV.Storable a, Random a, RandomGen g) => g -> Int -> SV.Vector a
