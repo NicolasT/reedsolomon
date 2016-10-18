@@ -70,7 +70,8 @@ Library
   Exposed-Modules:     Data.ReedSolomon
                      , Data.ReedSolomon.BuildInfo
                      , Data.Vector.Storable.ByteString
-  Other-Modules:       Data.ReedSolomon.Galois
+  Other-Modules:       Data.ReedSolomon.Backend
+                     , Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Matrix
                      , Data.Vector.Generic.Compat
@@ -187,6 +188,7 @@ Test-Suite reedsolomon-test
                      , ReedSolomon
                      , Vector
                      , Data.ReedSolomon
+                     , Data.ReedSolomon.Backend
                      , Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Galois.NoAsm
@@ -231,6 +233,7 @@ Benchmark reedsolomon-bench
                      , src
   Main-Is:             Main.hs
   Other-Modules:       Data.ReedSolomon
+                     , Data.ReedSolomon.Backend
                      , Data.ReedSolomon.Galois
                      , Data.ReedSolomon.Galois.GenTables
                      , Data.ReedSolomon.Galois.NoAsm

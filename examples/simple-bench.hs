@@ -25,7 +25,7 @@ import qualified Data.ReedSolomon as RS
 
 runBench :: RS.Encoder -> RS.Matrix -> IO Double
 runBench encoder shards = do
-    let bench = C.nf (fromJust . RS.encode encoder) shards
+    let bench = C.nf (fromJust . RS.encode RS.defaultBackend encoder) shards
 
     r <- C.benchmark' bench
 

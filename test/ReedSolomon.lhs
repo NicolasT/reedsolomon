@@ -83,17 +83,17 @@ func TestEncoding(t *testing.T) {
 >                     let (h, t) = splitAt perShard s in
 >                     Just (V.fromListN perShard h, t)
 >
->     parities <- RS.encode r shards
+>     parities <- RS.encode RS.defaultBackend r shards
 >     let allChunks = (V.++) shards parities
 >
->     assertBool "Verification failed" =<< RS.verify r allChunks
+>     assertBool "Verification failed" =<< RS.verify RS.defaultBackend r allChunks
 >
 >     catch
->         (void $ RS.encode r [[]])
+>         (void $ RS.encode RS.defaultBackend r [[]])
 >         (\(RS.InvalidNumberOfShards RS.DataShard 1) -> return ())
 >
 >     catch
->         (void $ RS.encode r (V.fromListN 13 ([1] : replicate 12 [])))
+>         (void $ RS.encode RS.defaultBackend r (V.fromListN 13 ([1] : replicate 12 [])))
 >         (\(RS.InvalidNumberOfShards RS.DataShard 13) -> return ())
 
 func TestReconstruct(t *testing.T) {
@@ -170,38 +170,38 @@ func TestReconstruct(t *testing.T) {
 >         shards = flip (V.unfoldrN 10) randoms' $ \s ->
 >                     let (h, t) = splitAt perShard s in
 >                     Just (V.fromListN perShard h, t)
->     parities <- RS.encode r shards
+>     parities <- RS.encode RS.defaultBackend r shards
 >     let toReconstruct = V.map Just ((V.++) shards parities)
->     all' <- RS.reconstruct r toReconstruct
+>     all' <- RS.reconstruct RS.defaultBackend r toReconstruct
 >
 >     all' @?= (V.++) shards parities
 >
->     shards' <- RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
->                                                        , (7, Nothing)
->                                                        , (11, Nothing)
->                                                        ]
->     verified <- RS.verify r shards'
+>     shards' <- RS.reconstruct RS.defaultBackend r $ (V.//) toReconstruct [ (0, Nothing)
+>                                                                          , (7, Nothing)
+>                                                                          , (11, Nothing)
+>                                                                          ]
+>     verified <- RS.verify RS.defaultBackend r shards'
 >     verified @?= True
 >
 >     catch
 >         (do
->             _ <- RS.reconstruct r $ (V.//) toReconstruct [ (0, Nothing)
->                                                          , (4, Nothing)
->                                                          , (7, Nothing)
->                                                          , (11, Nothing)
->                                                          ]
+>             _ <- RS.reconstruct RS.defaultBackend r $ (V.//) toReconstruct [ (0, Nothing)
+>                                                                            , (4, Nothing)
+>                                                                            , (7, Nothing)
+>                                                                            , (11, Nothing)
+>                                                                            ]
 >             assertFailure "Expected 'Too few shards'")
 >         (\(RS.InvalidNumberOfShards RS.AnyShard 9) -> return ())
 >
 >     catch
 >         (do
->             _ <- RS.reconstruct r [Just []]
+>             _ <- RS.reconstruct RS.defaultBackend r [Just []]
 >             assertFailure "Expected 'Too few shards'")
 >         (\(RS.InvalidNumberOfShards RS.AnyShard 1) -> return ())
 >
 >     catch
 >         (do
->             _ <- RS.reconstruct r (V.replicate 13 Nothing)
+>             _ <- RS.reconstruct RS.defaultBackend r (V.replicate 13 Nothing)
 >             assertFailure "Expected 'No shard data'")
 >         (\RS.EmptyShards -> return ())
 
@@ -277,25 +277,25 @@ func TestVerify(t *testing.T) {
 >                         let (h, t) = splitAt perShard s in
 >                         Just (V.fromListN perShard h, t)
 >
->     parityShards <- RS.encode r dataShards
+>     parityShards <- RS.encode RS.defaultBackend r dataShards
 >     let shards = (V.++) dataShards parityShards
 >
->     assertBool "Verification failed" =<< RS.verify r shards
+>     assertBool "Verification failed" =<< RS.verify RS.defaultBackend r shards
 >
 >     let shards' = V.update shards [(10, V.replicate perShard 0)]
 >
->     assertBool "Verification did not fail" =<< not `fmap` RS.verify r shards'
+>     assertBool "Verification did not fail" =<< not `fmap` RS.verify RS.defaultBackend r shards'
 >
 >     let shards'' = V.update shards [(0, V.replicate perShard 0)]
 >
->     assertBool "Verification did not fail" =<< not `fmap` RS.verify r shards''
+>     assertBool "Verification did not fail" =<< not `fmap` RS.verify RS.defaultBackend r shards''
 >
 >     catch
->         (void $ RS.verify r [[]])
+>         (void $ RS.verify RS.defaultBackend r [[]])
 >         (\(RS.InvalidNumberOfShards RS.DataShard 1) -> return ())
 >
 >     catch
->         (void $ RS.verify r (V.replicate 14 []))
+>         (void $ RS.verify RS.defaultBackend r (V.replicate 14 []))
 >         (\RS.EmptyShards -> return ())
 
 func TestOneEncode(t *testing.T) {
@@ -359,7 +359,7 @@ func TestOneEncode(t *testing.T) {
 >                  , [6, 7]
 >                  , [8, 9]
 >                  ]
->     parity <- RS.encode codec shards
+>     parity <- RS.encode RS.defaultBackend codec shards
 >     let expected = [ [12, 13]
 >                    , [10, 11]
 >                    , [14, 15]
@@ -370,12 +370,12 @@ func TestOneEncode(t *testing.T) {
 >
 >     let allShards = (V.++) shards expected
 >
->     verified <- RS.verify codec allShards
+>     verified <- RS.verify RS.defaultBackend codec allShards
 >     verified @?= True
 >
 >     let allShards' = (V.//) allShards [(8, [91, 91])]
 >
->     verified' <- RS.verify codec allShards'
+>     verified' <- RS.verify RS.defaultBackend codec allShards'
 >     verified' @?= False
 
 func fillRandom(b []byte) {
@@ -867,7 +867,7 @@ func TestNew(t *testing.T) {
 >     let Right r = RS.new numDataShards numParities
 >
 >     dataShards <- V.replicateM numDataShards (V.replicateM fragmentSize arbitrary)
->     let Just parities = RS.encode r dataShards
+>     let Just parities = RS.encode RS.defaultBackend r dataShards
 >         allFragments = (V.++) dataShards parities
 >
 >     dropped <- do
@@ -876,7 +876,7 @@ func TestNew(t *testing.T) {
 >         vectorOf numDrops dropIdx
 >
 >     let someFragments = (V.//) (V.map Just allFragments) $ map (\idx -> (idx, Nothing)) dropped
->         Right recovered = RS.reconstruct r someFragments
+>         Right recovered = RS.reconstruct RS.defaultBackend r someFragments
 >
 >     return $ recovered == allFragments
 

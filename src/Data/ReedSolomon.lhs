@@ -1,5 +1,6 @@
 > {-# LANGUAGE CPP #-}
 > {-# LANGUAGE DeriveDataTypeable #-}
+> {-# LANGUAGE RankNTypes #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
 #if __GLASGOW_HASKELL__ == 708
 > {-# OPTIONS_GHC -fno-warn-amp #-}
@@ -22,6 +23,7 @@
 > module Data.ReedSolomon (
 >     -- * Core API
 >       Encoder
+>     , defaultBackend
 >     , new
 >     , Matrix
 >     , encode
@@ -61,16 +63,17 @@
 >
 > import Control.Loop (numLoop)
 >
+> import Data.ReedSolomon.Backend (Backend(..))
 > import Data.ReedSolomon.Matrix (Matrix)
 > import qualified Data.ReedSolomon.Matrix as Matrix
-#if HAVE_SIMD
-> import Data.ReedSolomon.Galois.SIMD (galMulSlice, galMulSliceXor)
-#else
-> import Data.ReedSolomon.Galois.NoAsm (galMulSlice, galMulSliceXor)
-#endif
 > import qualified Data.Vector.Generic.Compat as VC
 > import qualified Data.Vector.Generic.Exceptions as VE
 > import qualified Data.Vector.Generic.Lifted as VL
+#if HAVE_SIMD
+> import qualified Data.ReedSolomon.Galois.SIMD as B (backend)
+#else
+> import qualified Data.ReedSolomon.Galois.NoAsm as B (backend)
+#endif
 
 /**
  * Reed-Solomon Coding over 8-bit values.
@@ -296,15 +299,16 @@ func (r reedSolomon) Encode(shards [][]byte) error {
 > -- If all shards are empty, 'EmptyShards' is thrown. Similarly, when shards
 > -- are of inconsistent length, 'InvalidShardSize' is thrown.
 > encode :: MonadThrow m
->        => Encoder -- ^ Encoder to use
+>        => (forall s. Backend s) -- ^ Encoding backend to use
+>        -> Encoder -- ^ Encoder to use
 >        -> Matrix -- ^ Data shards
 >        -> m Matrix
-> encode r shards
+> encode backend r shards
 >     | V.length shards /= rsDataShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)
 >     | Left e <- checkShards shards False = throwM e
 >     | otherwise = return $ runST $ do
 >         output :: MMatrix s <- V.replicateM (rsParityShards r) (MV.new $ shardSize shards)
->         codeSomeShards r (rsParity r) shards output (rsParityShards r) (V.length $ V.head shards)
+>         codeSomeShards backend r (rsParity r) shards output (rsParityShards r) (V.length $ V.head shards)
 >         V.forM output V.unsafeFreeze
 
 // Verify returns true if the parity shards contain the right data.
@@ -329,13 +333,13 @@ func (r reedSolomon) Verify(shards [][]byte) (bool, error) {
 > --
 > -- This function will re-encode the data chunks, and validate the code chunks
 > -- in the given 'Matrix' are equal.
-> verify :: MonadThrow m => Encoder -> Matrix -> m Bool
-> verify r shards
+> verify :: MonadThrow m => (forall s. Backend s) -> Encoder -> Matrix -> m Bool
+> verify backend r shards
 >     | V.length shards /= rsShards r = throwM (InvalidNumberOfShards DataShard $ V.length shards)
 >     | Left e <- checkShards shards False = throwM e
 >     | otherwise =
 >         let (dataShards, toCheck) = V.splitAt (rsDataShards r) shards in
->         checkSomeShards r (rsParity r) dataShards toCheck (rsParityShards r) (V.length $ V.head shards)
+>         checkSomeShards backend r (rsParity r) dataShards toCheck (rsParityShards r) (V.length $ V.head shards)
 
 // Multiplies a subset of rows from a coding matrix by a full set of
 // input shards to produce some output shards.
@@ -363,14 +367,15 @@ func (r reedSolomon) codeSomeShards(matrixRows, inputs, outputs [][]byte, output
 	}
 }
 
-> codeSomeShards :: Encoder -> Matrix -> Matrix -> MMatrix s -> Int -> Int -> ST s ()
-> codeSomeShards _r matrixRows inputs outputs _outputCount _byteCount = do
+> codeSomeShards :: Backend s -> Encoder -> Matrix -> Matrix -> MMatrix s -> Int -> Int -> ST s ()
+> codeSomeShards backend _r matrixRows inputs outputs _outputCount _byteCount = do
 >     VC.iforM_ inputs $ \c in_ -> {-# SCC "codeSomeShards:dataShards" #-} do
 >         VC.iforM_ outputs $ \iRow oi -> {-# SCC "codeSomeShards:parityShards" #-} do
 >             let mic = V.unsafeIndex (V.unsafeIndex matrixRows iRow) c
 >             if (c == 0)
->             then {-# SCC "codeSomeShards:galMulSlice" #-} galMulSlice mic in_ oi
->             else {-# SCC "codeSomeShards:galMulSliceXor" #-} galMulSliceXor mic in_ oi
+>             then {-# SCC "codeSomeShards:galMulSlice" #-} (backendGalMulSlice backend) mic in_ oi
+>             else {-# SCC "codeSomeShards:galMulSliceXor" #-} (backendGalMulSliceXor backend) mic in_ oi
+> {-# INLINE codeSomeShards #-}
 
 // How many bytes per goroutine.
 const splitSize = 512
@@ -464,10 +469,10 @@ func (r reedSolomon) checkSomeShards(matrixRows, inputs, toCheck [][]byte, outpu
 	return same
 }
 
-> checkSomeShards :: MonadThrow m => Encoder -> Matrix -> Matrix -> Matrix -> Int -> Int -> m Bool
-> checkSomeShards r _matrixRows inputs toCheck _outputCount _byteCount =
+> checkSomeShards :: MonadThrow m => (forall s. Backend s) -> Encoder -> Matrix -> Matrix -> Matrix -> Int -> Int -> m Bool
+> checkSomeShards backend r _matrixRows inputs toCheck _outputCount _byteCount =
 >     -- Very basic non-parallel implementation for now
->     encode r inputs >>= \encoded -> return $ encoded == toCheck
+>     encode backend r inputs >>= \encoded -> return $ encoded == toCheck
 
 // ErrShardNoData will be returned if there are no shards,
 // or if the length of all shards is zero.
@@ -642,10 +647,11 @@ func (r reedSolomon) Reconstruct(shards [][]byte) error {
 
 > -- | Reconstruct partial data.
 > reconstruct :: MonadThrow m
->             => Encoder -- ^ Encoder to use
+>             => (forall s. Backend s) -- ^ Encoding backend to use
+>             -> Encoder -- ^ Encoder to use
 >             -> V.Vector (Maybe (SV.Vector Word8)) -- ^ Partial data and parity shards
 >             -> m Matrix -- ^ Reconstructed data and parity shards
-> reconstruct r shards0
+> reconstruct backend r shards0
 >     | V.length shards0 /= rsShards r = throwM (InvalidNumberOfShards AnyShard $ V.length shards0)
 >     | Left e <- checkShards shards0' True = throwM e
 >     | numberPresent == rsShards r = return $ V.map fromJust shards0
@@ -703,7 +709,7 @@ func (r reedSolomon) Reconstruct(shards [][]byte) error {
 >         outputs' <- VL.freeze outputs
 >
 >         subShards' <- VL.mapM V.freeze =<< VL.freeze subShards
->         lift $ codeSomeShards r matrixRows' subShards' (V.take outputCount outputs') outputCount shardSize'
+>         lift $ codeSomeShards backend r matrixRows' subShards' (V.take outputCount outputs') outputCount shardSize'
 >
 >         let loop2 iShard outputCount'
 >                 | iShard >= rsShards r = return outputCount'
@@ -726,7 +732,7 @@ func (r reedSolomon) Reconstruct(shards [][]byte) error {
 >         outputs'' <- VL.freeze outputs
 >         s <- VL.mapM V.freeze =<< (VL.freeze $ MV.slice 0 dataShards shards)
 >
->         lift $ codeSomeShards r matrixRows'' s (V.slice 0 outputCount' outputs'') outputCount' shardSize'
+>         lift $ codeSomeShards backend r matrixRows'' s (V.slice 0 outputCount' outputs'') outputCount' shardSize'
 >
 >         VL.mapM V.unsafeFreeze =<< VL.unsafeFreeze shards
 >   where
@@ -873,3 +879,11 @@ func (r reedSolomon) Join(dst io.Writer, shards [][]byte, outSize int) error {
 >
 > foreign import ccall unsafe "reedsolomon_determine_cpu_support" c_reedsolomon_determine_cpu_support :: IO CInt
 #endif
+
+> -- | Default encoding routine backend.
+> --
+> -- On systems where the SIMD routines are available, this will be the SIMD
+> -- backend. On other systems, the native (but slow) Haskell implementation is
+> -- selected.
+> defaultBackend :: Backend s
+> defaultBackend = B.backend

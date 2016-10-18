@@ -173,7 +173,7 @@ func main() {
 	err = enc.Encode(shards)
 	checkErr(err)
 
->     parities <- RS.encode enc shards
+>     parities <- RS.encode RS.defaultBackend enc shards
 >     let shards' = (V.++) shards parities
 
 	// Write out the resulting files.
