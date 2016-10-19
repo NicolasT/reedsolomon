@@ -16,16 +16,17 @@ dependencies:
   override:
     - cabal update
     - cabal sandbox init
-    - cabal install --constraint="template-haskell installed" --dependencies-only --enable-tests -fexamples
-    - cabal configure --enable-tests -fexamples
+    - cd reedsolomon; cabal sandbox init --sandbox `pwd`/../.cabal-sandbox
+    - cd reedsolomon; cabal install --constraint="template-haskell installed" --dependencies-only --enable-tests -fexamples
+    - cd reedsolomon; cabal configure --enable-tests -fexamples
 
 test:
   override:
-    - cd cbits; autoreconf -vi
-    - cabal build
-    - cabal test --show-details=always --test-options="+RTS -N2"
-    - cabal test --show-details=always --test-options="--xml $CIRCLE_TEST_REPORTS/junit.xml +RTS -N2"
+    - cd reedsolomon; cd cbits; autoreconf -vi
+    - cd reedsolomon; cabal build
+    - cd reedsolomon; cabal test --show-details=always --test-options="+RTS -N2"
+    - cd reedsolomon; cabal test --show-details=always --test-options="--xml $CIRCLE_TEST_REPORTS/junit.xml +RTS -N2"
 
   post:
-    - cabal haddock --hyperlink-source
-    - mv dist/doc/html/reedsolomon/* $CIRCLE_ARTIFACTS/
+    - cd reedsolomon; cabal haddock --hyperlink-source
+    - cd reedsolomon; mv dist/doc/html/reedsolomon/* $CIRCLE_ARTIFACTS/

@@ -1,5 +1,5 @@
 packages:
-- '.'
+- reedsolomon
 
 extra-deps:
 - bytestring-mmap-0.2.2

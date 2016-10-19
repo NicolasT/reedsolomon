@@ -16,7 +16,6 @@ Category:            Data
 Build-Type:          Custom
 Extra-Source-Files:  README.md
                    , examples/README.md
-                   , stack.yaml
 
                    , build-tools/ar-wrapper
                    , build-tools/ghc-wrapper
@@ -267,3 +266,4 @@ Benchmark reedsolomon-bench
 Source-Repository head
   Type:     git
   Location: https://github.com/NicolasT/reedsolomon.git
+  Subdir:   reedsolomon

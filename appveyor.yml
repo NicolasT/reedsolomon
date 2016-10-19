@@ -25,7 +25,7 @@ install:
   - echo "" | stack build --test --only-snapshot --flag=reedsolomon:-LLVM
 
 build_script:
-  - echo "" | stack exec bash -- -lc "cd /c/reedsolomon/cbits; autoreconf -vi"
+  - echo "" | stack exec bash -- -lc "cd /c/reedsolomon/reedsolomon/cbits; autoreconf -vi"
   # Building benchmarks is temporarily disabled due to https://github.com/fpco/stackage/issues/1912
   # - echo "" | stack build --pedantic --test --no-run-tests --bench --no-run-benchmarks --flag=reedsolomon:-LLVM --flag=reedsolomon:examples
   - echo "" | stack build --pedantic --test --no-run-tests --flag=reedsolomon:-LLVM
@@ -35,4 +35,4 @@ test_script:
   - echo "" | stack build --pedantic --test --test-arguments "--xml junit.xml +RTS -N1" --flag=reedsolomon:-LLVM
 
 on_finish:
-  - ps: (new-object net.webclient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\junit.xml))
+  - ps: (new-object net.webclient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\reedsolomon\junit.xml))

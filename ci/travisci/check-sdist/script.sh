@@ -1,5 +1,6 @@
 #!/bin/bash -xue
 
+pushd reedsolomon
 PKG_VERSION=`grep ^Version\: reedsolomon.cabal | awk '{ print $2 }'`
 
 pushd cbits
@@ -8,10 +9,13 @@ make distcheck
 mv reedsolomon-$PKG_VERSION.tar.gz /tmp/reedsolomon-$PKG_VERSION-cbits.tar.gz
 make distclean
 popd
+popd
 
 cp ci/travisci/check-sdist/test.hs /tmp
 
 git clean -dxf
+
+cd reedsolomon
 
 cabal sdist
 

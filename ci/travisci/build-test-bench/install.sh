@@ -1,6 +1,6 @@
 #!/bin/bash -ue
 
-pushd cbits
+pushd reedsolomon/cbits
 autoreconf -fvi
 popd
 

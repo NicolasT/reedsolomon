@@ -1,5 +1,7 @@
 #!/bin/bash -xue
 
+cd reedsolomon
+
 function build() {
     local suffix=$1
     shift
