@@ -1,0 +1,48 @@
+Name:                reedsolomon-examples
+Version:             999
+Synopsis:            Reed-Solomon Erasure Coding in Haskell - Examples
+Description:         Please see README.md
+Homepage:            http://github.com/NicolasT/reedsolomon
+Bug-Reports:         http://github.com/NicolasT/reedsolomon/issues
+License:             MIT
+License-File:        LICENSE
+Author:              Nicolas Trangez
+Maintainer:          ikke@nicolast.be
+Copyright:
+    (c) 2015, 2016, Nicolas Trangez
+    (c) 2015, Klaus Post
+Category:            Data
+Build-Type:          Simple
+Extra-Source-Files:  README.md
+Cabal-Version:       >=1.10
+
+Executable reedsolomon-simple-encoder
+  Hs-Source-Dirs:      src
+  Main-Is:             simple-encoder.lhs
+  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  Build-Depends:       base > 4.7 && < 4.10
+                     , bytestring >= 0.10 && < 0.11
+                     , bytestring-mmap >= 0.2 && < 0.3
+                     , filepath >= 1.3 && < 1.5
+                     , optparse-applicative >= 0.11 && < 0.13
+                     , reedsolomon == 999
+                     , vector >= 0.10 && < 0.12
+  Default-Language:    Haskell2010
+
+Executable reedsolomon-simple-decoder
+  Hs-Source-Dirs:      src
+  Main-Is:             simple-decoder.lhs
+  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  Build-Depends:       base >= 4.7 && < 4.10
+                     , bytestring >= 0.10 && < 0.11
+                     , bytestring-mmap >= 0.2 && < 0.3
+                     , filepath >= 1.3 && < 1.5
+                     , optparse-applicative >= 0.11 && < 0.13
+                     , reedsolomon == 999
+                     , vector >= 0.10 && < 0.12
+  Default-Language:    Haskell2010
+
+Source-Repository head
+  Type:     git
+  Location: https://github.com/NicolasT/reedsolomon.git
+  Subdir:   reedsolomon-examples

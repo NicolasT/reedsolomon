@@ -22,17 +22,17 @@ install:
   - echo "" | stack exec bash -- -lc "mkdir /tmp; pacman --sync --needed --noconfirm autoconf automake make"
   # Building benchmarks and examples is temporarily disabled due to https://github.com/fpco/stackage/issues/1912
   # - echo "" | stack build --test --bench --only-snapshot --flag=reedsolomon:-LLVM --flag=reedsolomon:examples
-  - echo "" | stack build --test --only-snapshot --flag=reedsolomon:-LLVM
+  - echo "" | stack build --test --only-snapshot --flag=reedsolomon:-LLVM reedsolomon
 
 build_script:
   - echo "" | stack exec bash -- -lc "cd /c/reedsolomon/reedsolomon/cbits; autoreconf -vi"
   # Building benchmarks is temporarily disabled due to https://github.com/fpco/stackage/issues/1912
   # - echo "" | stack build --pedantic --test --no-run-tests --bench --no-run-benchmarks --flag=reedsolomon:-LLVM --flag=reedsolomon:examples
-  - echo "" | stack build --pedantic --test --no-run-tests --flag=reedsolomon:-LLVM
+  - echo "" | stack build --pedantic --test --no-run-tests --flag=reedsolomon:-LLVM reedsolomon
 
 test_script:
-  - echo "" | stack build --pedantic --test --test-arguments "+RTS -N1" --flag=reedsolomon:-LLVM
-  - echo "" | stack build --pedantic --test --test-arguments "--xml junit.xml +RTS -N1" --flag=reedsolomon:-LLVM
+  - echo "" | stack build --pedantic --test --test-arguments "+RTS -N1" --flag=reedsolomon:-LLVM reedsolomon
+  - echo "" | stack build --pedantic --test --test-arguments "--xml junit.xml +RTS -N1" --flag=reedsolomon:-LLVM reedsolomon
 
 on_finish:
   - ps: (new-object net.webclient).UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\reedsolomon\junit.xml))

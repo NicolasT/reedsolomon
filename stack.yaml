@@ -1,5 +1,6 @@
 packages:
 - reedsolomon
+- reedsolomon-examples
 
 extra-deps:
 - bytestring-mmap-0.2.2

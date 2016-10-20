@@ -15,7 +15,6 @@ Copyright:
 Category:            Data
 Build-Type:          Custom
 Extra-Source-Files:  README.md
-                   , examples/README.md
 
                    , build-tools/ar-wrapper
                    , build-tools/ghc-wrapper
@@ -102,41 +101,6 @@ Library
   if flag(LLVM)
     Ghc-Options:       -fllvm
     Cpp-Options:       -DHAVE_LLVM=1
-
-Executable reedsolomon-simple-encoder
-  Hs-Source-Dirs:      examples
-  Main-Is:             simple-encoder.lhs
-  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  -- `Build-Depends` goes into the conditional block so Cabal calculates
-  -- dependencies correctly, even though `Buildable` is set to `False`.
-  -- See https://github.com/haskell/cabal/issues/1725#issuecomment-123783734
-  if !os(windows) && flag(examples)
-    Build-Depends:     base
-                     , bytestring
-                     , vector
-                     , optparse-applicative >= 0.11 && < 0.13
-                     , filepath >= 1.3 && < 1.5
-                     , bytestring-mmap >= 0.2 && < 0.3
-                     , reedsolomon
-  else
-    Buildable:         False
-  Default-Language:    Haskell2010
-
-Executable reedsolomon-simple-decoder
-  Hs-Source-Dirs:      examples
-  Main-Is:             simple-decoder.lhs
-  Ghc-Options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-  if !os(windows) && flag(examples)
-    Build-Depends:     base
-                     , bytestring
-                     , vector
-                     , optparse-applicative >= 0.11 && < 0.13
-                     , filepath >= 1.3 && < 1.5
-                     , bytestring-mmap >= 0.2 && < 0.3
-                     , reedsolomon
-  else
-    Buildable:         False
-  Default-Language:    Haskell2010
 
 Executable reedsolomon-simple-bench
   Hs-Source-Dirs:      examples
