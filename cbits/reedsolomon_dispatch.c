@@ -58,6 +58,22 @@
 # define ALWAYS_INLINE
 #endif
 
+/* The prototype we expect for `__get_cpuid_count`. This is already somewhat
+ * checked by autoconf, but this won't hurt to ensure 'our' version below is
+ * consistent with the 'system' one.
+ */
+static inline int __get_cpuid_count(
+        const unsigned int level,
+        const unsigned int count,
+        unsigned int *eax,
+        unsigned int *ebx,
+        unsigned int *ecx,
+        unsigned int *edx);
+
+/* GCC 6.3.1 includes a predefined version of this function, so we should only
+ * define it on systems which don't have it available from cpuid.h
+ */
+#if !defined(HAVE_DECL___GET_CPUID_COUNT) || !HAVE_DECL___GET_CPUID_COUNT
 static inline ALWAYS_INLINE int __get_cpuid_count(
         const unsigned int level,
         const unsigned int count,
@@ -74,6 +90,7 @@ static inline ALWAYS_INLINE int __get_cpuid_count(
         __cpuid_count(level, count, *eax, *ebx, *ecx, *edx);
         return 1;
 }
+#endif /* !HAVE_DECL___GET_CPUID_COUNT */
 
 struct cpuid_registers {
         unsigned int eax, ebx, ecx, edx;
