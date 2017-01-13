@@ -12,6 +12,9 @@ import Text.Printf (printf)
 import System.Random (Random(random), RandomGen, getStdGen)
 
 import Options.Applicative
+#if MIN_VERSION_optparse_applicative(0, 13, 0)
+import Data.Monoid ((<>))
+#endif
 
 import System.Clock (Clock(Monotonic), TimeSpec(sec, nsec), getTime, diffTimeSpec)
 
