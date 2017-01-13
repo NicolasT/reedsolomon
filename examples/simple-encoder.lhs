@@ -15,6 +15,9 @@
 > import qualified Data.Vector.Generic as V
 >
 > import Options.Applicative
+#if MIN_VERSION_optparse_applicative(0, 13, 0)
+> import Data.Monoid ((<>))
+#endif
 >
 > import System.IO.Posix.MMap (unsafeMMapFile)
 >

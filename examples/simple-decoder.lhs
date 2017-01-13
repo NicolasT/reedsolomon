@@ -14,6 +14,9 @@
 > import System.IO.Posix.MMap (unsafeMMapFile)
 >
 > import Options.Applicative
+#if MIN_VERSION_optparse_applicative(0, 13, 0)
+> import Data.Monoid ((<>))
+#endif
 >
 > import qualified Data.ByteString as BS
 >
