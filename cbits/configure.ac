@@ -249,6 +249,15 @@ AC_DEFINE_UNQUOTED(
 
 # Checks for library functions.
 AC_FUNC_MALLOC
+AC_CHECK_DECLS(
+    [[__get_cpuid_count(const unsigned int, const unsigned int, unsigned int *, unsigned int *, unsigned int *, unsigned int *)]],
+    [],
+    [],
+    [[
+        #if defined(HAVE_CPUID_H) && HAVE_CPUID_H
+        # include <cpuid.h>
+        #endif
+    ]])
 
 # Definitions based on discovered compiler or ISA characteristics.
 rs_generic=1
