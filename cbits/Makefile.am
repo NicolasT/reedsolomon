@@ -78,5 +78,4 @@ if RS_HAVE_ALTIVEC
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-altivec.a
 endif
 
-dist_noinst_SCRIPTS = compare-isa.sh
 EXTRA_DIST = reedsolomon-gal-mul-stdio-quickcheck.hs
