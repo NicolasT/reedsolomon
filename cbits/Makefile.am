@@ -53,7 +53,7 @@ libreedsolomon_altivec_a_CPPFLAGS = -DTARGET=altivec -DHOT
 noinst_LIBRARIES += libreedsolomon-altivec.a
 endif
 
-noinst_PROGRAMS = reedsolomon-gal-mul-stdio
+check_PROGRAMS = reedsolomon-gal-mul-stdio
 reedsolomon_gal_mul_stdio_SOURCES = tests/reedsolomon-gal-mul-stdio.c
 reedsolomon_gal_mul_stdio_CFLAGS = -I$(top_srcdir)/src
 reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a \
@@ -80,4 +80,9 @@ if RS_HAVE_ALTIVEC
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-altivec.a
 endif
 
-EXTRA_DIST = tests/reedsolomon-gal-mul-stdio-quickcheck.hs
+TESTS = tests/zeros.test
+TEST_LOG_COMPILER = $(SHELL) $(top_srcdir)/tests/run-test.sh
+
+EXTRA_DIST = tests/reedsolomon-gal-mul-stdio-quickcheck.hs \
+	     tests/run-test.sh \
+	     $(TESTS)
