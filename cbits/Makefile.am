@@ -1,7 +1,11 @@
 ACLOCAL_AMFLAGS = -I m4
 
+@CODE_COVERAGE_RULES@
+
 libreedsolomon_a_SOURCES = src/reedsolomon-dispatch.c \
 		           src/reedsolomon.h
+libreedsolomon_a_CPPFLAGS = $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_a_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES = libreedsolomon.a
 
 SIMD_SRC = src/reedsolomon.c \
@@ -9,55 +13,73 @@ SIMD_SRC = src/reedsolomon.c \
 
 if RS_HAVE_GENERIC
 libreedsolomon_generic_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_generic_a_CPPFLAGS = -DTARGET=generic
+libreedsolomon_generic_a_CPPFLAGS = -DTARGET=generic \
+				    $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_generic_a_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-generic.a
 endif
 
 if RS_HAVE_SSE2
 libreedsolomon_sse2_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_sse2_a_CPPFLAGS = -DTARGET=sse2
-libreedsolomon_sse2_a_CFLAGS = -msse2 $(AM_CFLAGS)
+libreedsolomon_sse2_a_CPPFLAGS = -DTARGET=sse2 \
+				 $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_sse2_a_CFLAGS = -msse2 $(AM_CFLAGS) \
+			       $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-sse2.a
 endif
 
 if RS_HAVE_SSSE3
 libreedsolomon_ssse3_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_ssse3_a_CPPFLAGS = -DTARGET=ssse3
-libreedsolomon_ssse3_a_CFLAGS = -mssse3 $(AM_CFLAGS)
+libreedsolomon_ssse3_a_CPPFLAGS = -DTARGET=ssse3 \
+				  $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_ssse3_a_CFLAGS = -mssse3 $(AM_CFLAGS) \
+				$(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-ssse3.a
 endif
 
 if RS_HAVE_AVX
 libreedsolomon_avx_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_avx_a_CPPFLAGS = -DTARGET=avx -DHOT
-libreedsolomon_avx_a_CFLAGS = -mavx $(AM_CFLAGS)
+libreedsolomon_avx_a_CPPFLAGS = -DTARGET=avx -DHOT \
+				$(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_avx_a_CFLAGS = -mavx $(AM_CFLAGS) \
+			      $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-avx.a
 endif
 
 if RS_HAVE_AVX2
 libreedsolomon_avx2_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_avx2_a_CPPFLAGS = -DTARGET=avx2 -DHOT
-libreedsolomon_avx2_a_CFLAGS = -mavx2 $(AM_CFLAGS)
+libreedsolomon_avx2_a_CPPFLAGS = -DTARGET=avx2 -DHOT \
+				 $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_avx2_a_CFLAGS = -mavx2 $(AM_CFLAGS) \
+			       $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-avx2.a
 endif
 
 if RS_HAVE_NEON
 libreedsolomon_neon_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_neon_a_CPPFLAGS = -DTARGET=neon -DHOT
+libreedsolomon_neon_a_CPPFLAGS = -DTARGET=neon -DHOT \
+				 $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_neon_a_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-neon.a
 endif
 
 if RS_HAVE_ALTIVEC
 libreedsolomon_altivec_a_SOURCES = $(SIMD_SRC)
-libreedsolomon_altivec_a_CPPFLAGS = -DTARGET=altivec -DHOT
+libreedsolomon_altivec_a_CPPFLAGS = -DTARGET=altivec -DHOT \
+				    $(CODE_COVERAGE_CPPFLAGS)
+libreedsolomon_altivec_a_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-altivec.a
 endif
 
 check_PROGRAMS = reedsolomon-gal-mul-stdio
 reedsolomon_gal_mul_stdio_SOURCES = tests/reedsolomon-gal-mul-stdio.c
-reedsolomon_gal_mul_stdio_CFLAGS = -I$(top_srcdir)/src
+reedsolomon_gal_mul_stdio_CPPFLAGS = $(CODE_COVERAGE_CPPFLAGS)
+reedsolomon_gal_mul_stdio_CFLAGS = -I$(top_srcdir)/src \
+				   $(CODE_COVERAGE_CFLAGS)
 reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a \
 				  $(LIBOBJS)
+reedsolomon_gal_mul_stdio_LIBS = $(CODE_COVERAGE_LIBS)
+
 if RS_HAVE_GENERIC
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-generic.a
 endif

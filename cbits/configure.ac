@@ -25,6 +25,8 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 
+AX_CODE_COVERAGE()
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -65,24 +67,26 @@ _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 AX_APPEND_COMPILE_FLAGS([-Werror=unknown-pragmas -Werror=unused-command-line-argument -Werror=unknown-warning-option])
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
 AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format -Wundef -Wunknown-pragmas])
-AX_APPEND_COMPILE_FLAGS([-O3])
-dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
-dnl The error above is only triggered when the Graphite optimization is actually
-dnl used, i.e. not for the 'default' program source compiled to determine
-dnl compiler support for some flag. The snippet below should trigger it though.
-dnl See also: https://lists.debian.org/debian-gcc/2015/06/msg00164.html
-AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all], [], [], [
-    AC_LANG_PROGRAM([[
-            extern int argc;
-            extern char **argv;
-        ]], [[
-            int x = 0, result = 0;
-            for(x = 0; x < argc; x++) {
-                result |= (int)argv[x][0];
-            }
-            return result;
-        ]])])
-AX_APPEND_COMPILE_FLAGS([-funroll-loops -ftree-vectorize -fprefetch-loop-arrays])
+AS_IF([test "x$enable_code_coverage" != "xyes"], [
+        AX_APPEND_COMPILE_FLAGS([-O3])
+        dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
+        dnl The error above is only triggered when the Graphite optimization is actually
+        dnl used, i.e. not for the 'default' program source compiled to determine
+        dnl compiler support for some flag. The snippet below should trigger it though.
+        dnl See also: https://lists.debian.org/debian-gcc/2015/06/msg00164.html
+        AX_APPEND_COMPILE_FLAGS([-floop-parallelize-all], [], [], [
+            AC_LANG_PROGRAM([[
+                    extern int argc;
+                    extern char **argv;
+                ]], [[
+                    int x = 0, result = 0;
+                    for(x = 0; x < argc; x++) {
+                        result |= (int)argv[x][0];
+                    }
+                    return result;
+                ]])])
+        AX_APPEND_COMPILE_FLAGS([-funroll-loops -ftree-vectorize -fprefetch-loop-arrays])],
+        [AC_MSG_NOTICE([code coverage enabled, not enabling compiler optimizations])])
 AX_APPEND_COMPILE_FLAGS([-frecord-gcc-switches])
 
 ## Check for -fPIC
