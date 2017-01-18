@@ -94,7 +94,6 @@ Library
     Ghc-Options:       -g
   if impl(ghc >= 8.0)
     Ghc-Options:       -fno-warn-redundant-constraints
-  Ghc-Prof-Options:    -fprof-auto
 
   if !flag(SIMD)
     Other-Modules:     Data.ReedSolomon.Galois.NoAsm
@@ -221,7 +220,6 @@ Test-Suite reedsolomon-test
     Ghc-Options:       -fno-warn-redundant-constraints
   if flag(LLVM)
     Ghc-Options:       -fllvm
-  Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
     CPP-Options:       -DHAVE_SIMD=1
@@ -257,7 +255,6 @@ Benchmark reedsolomon-bench
     Ghc-Options:       -fno-warn-redundant-constraints
   if flag(LLVM)
     Ghc-Options:       -fllvm
-  Ghc-Prof-Options:    -fprof-auto
 
   if flag(SIMD)
     CPP-Options:       -DHAVE_SIMD=1
