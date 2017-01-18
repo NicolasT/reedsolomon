@@ -181,6 +181,7 @@ AC_DEFINE_UNQUOTED(
 # Checks for header files.
 AC_CHECK_HEADERS([stddef.h stdint.h unistd.h])
 AC_CHECK_HEADERS([cpuid.h])
+AC_CHECK_HEADERS([fcntl.h])
 
 ## Checks for ISA-specific header files.
 rs_simd_headers_save_flags=$CPPFLAGS
@@ -253,6 +254,7 @@ AC_DEFINE_UNQUOTED(
 
 # Checks for library functions.
 AC_FUNC_MALLOC
+AC_CHECK_FUNCS([strcasecmp])
 AC_CHECK_DECLS(
     [[__get_cpuid_count(const unsigned int, const unsigned int, unsigned int *, unsigned int *, unsigned int *, unsigned int *)]],
     [],
