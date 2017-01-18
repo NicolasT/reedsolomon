@@ -64,8 +64,6 @@ _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 ## Checks for supported generic compiler options.
 AX_APPEND_COMPILE_FLAGS([-Werror=unknown-pragmas -Werror=unused-command-line-argument -Werror=unknown-warning-option])
 AX_APPEND_COMPILE_FLAGS([-ggdb3])
-AS_IF([test x$PACKAGE_VERSION = x999],
-      AX_APPEND_COMPILE_FLAGS([-Werror]))
 AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -pedantic -Wno-pedantic-ms-format -Wundef -Wunknown-pragmas])
 AX_APPEND_COMPILE_FLAGS([-O3])
 dnl Handle "sorry, unimplemented: Graphite loop optimizations can only be used if the libcloog-ppl0 package is installed"
@@ -317,6 +315,9 @@ AC_DEFINE_UNQUOTED(
     [RS_ASSUMED_ALIGNMENT],
     _RS_ASSUMED_ALIGNMENT,
     [Assumed data alignment])
+
+AS_IF([test x$PACKAGE_VERSION = x999],
+      AX_APPEND_COMPILE_FLAGS([-Werror]))
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
