@@ -19,7 +19,7 @@ function build() {
         return $RC
     fi
 
-    make V=1
+    make reedsolomon-gal-mul-stdio V=1
 
     mv reedsolomon-gal-mul-stdio${exec_suffix} reedsolomon-gal-mul-stdio-${suffix}${exec_suffix}
 
