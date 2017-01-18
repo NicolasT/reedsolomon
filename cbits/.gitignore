@@ -3,3 +3,16 @@ aclocal.m4
 autom4te.cache/
 config.h.in
 configure
+
+Makefile
+config.h
+config.log
+config.status
+stamp-h1
+
+*.a
+
+reedsolomon-gal-mul-stdio
+test-suite.log
+
+reedsolomon-*.tar.gz
