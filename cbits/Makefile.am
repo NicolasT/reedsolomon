@@ -1,11 +1,11 @@
 ACLOCAL_AMFLAGS = -I m4
 
-libreedsolomon_a_SOURCES = reedsolomon_dispatch.c \
-		           reedsolomon.h
+libreedsolomon_a_SOURCES = src/reedsolomon-dispatch.c \
+		           src/reedsolomon.h
 noinst_LIBRARIES = libreedsolomon.a
 
-SIMD_SRC = reedsolomon.c \
-	   reedsolomon.h
+SIMD_SRC = src/reedsolomon.c \
+	   src/reedsolomon.h
 
 if RS_HAVE_GENERIC
 libreedsolomon_generic_a_SOURCES = $(SIMD_SRC)
@@ -54,6 +54,8 @@ noinst_LIBRARIES += libreedsolomon-altivec.a
 endif
 
 noinst_PROGRAMS = reedsolomon-gal-mul-stdio
+reedsolomon_gal_mul_stdio_SOURCES = tests/reedsolomon-gal-mul-stdio.c
+reedsolomon_gal_mul_stdio_CFLAGS = -I$(top_srcdir)/src
 reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a \
 				  $(LIBOBJS)
 if RS_HAVE_GENERIC
@@ -78,4 +80,4 @@ if RS_HAVE_ALTIVEC
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-altivec.a
 endif
 
-EXTRA_DIST = reedsolomon-gal-mul-stdio-quickcheck.hs
+EXTRA_DIST = tests/reedsolomon-gal-mul-stdio-quickcheck.hs

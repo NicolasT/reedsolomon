@@ -12,11 +12,12 @@ AC_INIT([reedsolomon],
         [https://github.com/NicolasT/reedsolomon])
 AC_REVISION(m4_esyscmd_s([git describe --always --long --dirty]))
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([reedsolomon.h])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_LIBOBJ_DIR([lib])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([src/reedsolomon.h])
 
-AM_INIT_AUTOMAKE([1.11 foreign -Wall -Werror])
+AM_INIT_AUTOMAKE([1.11 foreign subdir-objects -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
