@@ -54,7 +54,7 @@
 # endif
 #endif
 
-int read_all(const int fd, uint8_t *vec, size_t count) {
+static int read_all(const int fd, uint8_t *vec, size_t count) {
         ssize_t rc = 0;
 
         while(count > 0) {
@@ -62,6 +62,10 @@ int read_all(const int fd, uint8_t *vec, size_t count) {
 
                 if(rc < 0) {
                         perror("read");
+                        return -1;
+                }
+                if(rc == 0) {
+                        fprintf(stderr, "Unexpected EOF while reading\n");
                         return -1;
                 }
 
@@ -72,7 +76,7 @@ int read_all(const int fd, uint8_t *vec, size_t count) {
         return 0;
 }
 
-int write_all(const int fd, const uint8_t *vec, size_t count) {
+static int write_all(const int fd, const uint8_t *vec, size_t count) {
         ssize_t rc = 0;
 
         while(count > 0) {
@@ -80,6 +84,10 @@ int write_all(const int fd, const uint8_t *vec, size_t count) {
 
                 if(rc < 0) {
                         perror("write");
+                        return -1;
+                }
+                if(rc == 0) {
+                        fprintf(stderr, "Unexpected EOF while writing\n");
                         return -1;
                 }
 
@@ -109,6 +117,12 @@ int main(int argc, char **argv) {
         rc = sscanf(argv[1], "%" SCNsize_t "u", &size);
         if(rc == EOF) {
                 perror("sscanf");
+                rc = 1;
+                goto out;
+        }
+
+        if(size == 0) {
+                fprintf(stderr, "Invalid size: %" PRIsize_t "u\n", size);
                 rc = 1;
                 goto out;
         }
