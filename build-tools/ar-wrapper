@@ -11,7 +11,7 @@ set -e
 
 if test ${RC} -eq 0; then
     exec $@ ${CABAL_BUILD_DIR}/cbits/src/libreedsolomon_*_a-reedsolomon.o \
-            ${CABAL_BUILD_DIR}/cbits/src/reedsolomon-dispatch.o
+            ${CABAL_BUILD_DIR}/cbits/src/libreedsolomon_a-reedsolomon-dispatch.o
 else
     exec $@
 fi
