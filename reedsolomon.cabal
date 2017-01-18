@@ -29,25 +29,27 @@ Extra-Source-Files:  README.md
                    , cbits/m4/ax_gcc_func_attribute.m4
                    , cbits/m4/ax_require_defined.m4
 
-                   , cbits/reedsolomon.c
-                   , cbits/reedsolomon.h
-                   , cbits/reedsolomon_dispatch.c
-                   , cbits/malloc.c
-                   , cbits/reedsolomon-gal-mul-stdio.c
-                   , cbits/reedsolomon-gal-mul-stdio-quickcheck.hs
-                   , cbits/compare-isa.sh
+                   , cbits/src/reedsolomon.c
+                   , cbits/src/reedsolomon.h
+                   , cbits/src/reedsolomon-dispatch.c
+                   , cbits/lib/malloc.c
+                   , cbits/tests/reedsolomon-gal-mul-stdio.c
+                   , cbits/tests/reedsolomon-gal-mul-stdio-quickcheck.hs
+                   , cbits/tests/run-test.sh
+                   , cbits/tests/zeros.test
 
                    , cbits/aclocal.m4
-                   , cbits/ar-lib
-                   , cbits/compile
-                   , cbits/config.guess
                    , cbits/config.h.in
-                   , cbits/config.sub
                    , cbits/configure
-                   , cbits/depcomp
-                   , cbits/install-sh
                    , cbits/Makefile.in
-                   , cbits/missing
+                   , cbits/build-aux/ar-lib
+                   , cbits/build-aux/compile
+                   , cbits/build-aux/config.guess
+                   , cbits/build-aux/config.sub
+                   , cbits/build-aux/depcomp
+                   , cbits/build-aux/install-sh
+                   , cbits/build-aux/missing
+                   , cbits/build-aux/tap-driver.sh
 Cabal-Version:       >=1.10
 
 Flag SIMD

@@ -25,6 +25,7 @@ main = defaultMainWithHooks customHooks
   where
     customHooks = simpleUserHooks { confHook = customConfHook (confHook simpleUserHooks)
                                   , buildHook = customBuildHook (buildHook simpleUserHooks)
+                                  , testHook = customTestHook (testHook simpleUserHooks)
                                   , preSDist = customPreSDist (preSDist simpleUserHooks)
                                   }
 
@@ -66,13 +67,13 @@ customConfHook innerHook a b = do
                                     UserSpecified path -> path
                                     FoundOnSystem path -> path
 
-customBuildHook :: (PackageDescription -> LocalBuildInfo -> UserHooks -> BuildFlags -> IO ())
+customBuildHook :: (PackageDescription -> LocalBuildInfo -> a -> BuildFlags -> IO ())
                 -> PackageDescription
                 -> LocalBuildInfo
-                -> UserHooks
+                -> a
                 -> BuildFlags
                 -> IO ()
-customBuildHook innerHook packageDescription@PackageDescription{..} localBuildInfo@LocalBuildInfo{..} userHooks buildFlags = do
+customBuildHook innerHook packageDescription@PackageDescription{..} localBuildInfo@LocalBuildInfo{..} a buildFlags = do
     let wantSIMD = fromMaybe True $ lookup (FlagName "simd") $ configConfigurationsFlags configFlags
         verbosity = fromFlag $ buildVerbosity buildFlags
         version = pkgVersion package
@@ -110,7 +111,26 @@ customBuildHook innerHook packageDescription@PackageDescription{..} localBuildIn
                                 then mapBuildInfo addIncludeDir packageDescription
                                 else packageDescription
 
-    innerHook packageDescription' localBuildInfo userHooks buildFlags
+    innerHook packageDescription' localBuildInfo a buildFlags
+
+customTestHook :: (a -> b -> LocalBuildInfo -> c -> TestFlags -> IO ())
+               -> a
+               -> b
+               -> LocalBuildInfo
+               -> c
+               -> TestFlags
+               -> IO ()
+customTestHook innerHook a b localBuildInfo@LocalBuildInfo{..} c testFlags = do
+    let wantSIMD = fromMaybe True $ lookup (FlagName "simd") $ configConfigurationsFlags configFlags
+        verbosity = fromFlag $ testVerbosity testFlags
+
+    absBuildDir <- makeAbsolute buildDir
+    let cbitsBuildDir = absBuildDir </> "cbits"
+
+    when wantSIMD $
+        rawSystemExit verbosity "make" ["-C", cbitsBuildDir, "--no-print-directory"]
+
+    innerHook a b localBuildInfo c testFlags
 
 mapBuildInfo :: (BuildInfo -> BuildInfo) -> PackageDescription -> PackageDescription
 mapBuildInfo f desc = desc { library = fmap (\l -> l { libBuildInfo = f (libBuildInfo l) }) (library desc)
