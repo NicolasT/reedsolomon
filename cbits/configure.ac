@@ -10,6 +10,8 @@ AC_INIT([reedsolomon],
         [https://github.com/NicolasT/reedsolomon/issues],
         [reedsolomon],
         [https://github.com/NicolasT/reedsolomon])
+AC_REVISION(m4_esyscmd_s([git describe --always --long --dirty]))
+AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([reedsolomon.h])
 AC_CONFIG_HEADERS([config.h])
