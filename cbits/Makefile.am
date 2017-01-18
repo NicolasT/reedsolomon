@@ -81,7 +81,9 @@ reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-altivec.a
 endif
 
 TESTS = tests/zeros.test
-TEST_LOG_COMPILER = $(SHELL) $(top_srcdir)/tests/run-test.sh
+TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+		  $(top_srcdir)/build-aux/tap-driver.sh
+AM_TEST_LOG_FLAGS = $(SHELL) $(top_srcdir)/tests/run-test.sh
 
 EXTRA_DIST = tests/reedsolomon-gal-mul-stdio-quickcheck.hs \
 	     tests/run-test.sh \
