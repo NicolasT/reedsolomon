@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
 
 import Prelude hiding ((<$>))
@@ -113,14 +114,27 @@ customBuildHook innerHook packageDescription@PackageDescription{..} localBuildIn
 
     innerHook packageDescription' localBuildInfo a buildFlags
 
-customTestHook :: (a -> b -> LocalBuildInfo -> c -> TestFlags -> IO ())
-               -> a
-               -> b
-               -> LocalBuildInfo
-               -> c
-               -> TestFlags
-               -> IO ()
-customTestHook innerHook a b localBuildInfo@LocalBuildInfo{..} c testFlags = do
+-- Hack to support Cabal >= 1.18 < 1.22 and >= 1.22, which have different
+-- types for the `testHook` actions
+-- Thanks to glguy and dmwit in #Haskell for pointing me at
+-- https://github.com/hdbc/hdbc-postgresql/blob/82364136a583a43085f945207073b72ea1ed0cd1/Setup.hs#L34-L41
+class CustomTestHook innerHook where
+    customTestHook :: innerHook -> innerHook
+
+-- Cabal 1.18
+instance CustomTestHook (a -> LocalBuildInfo -> b -> TestFlags -> IO ()) where
+    customTestHook innerHook a localBuildInfo b testFlags = do
+        customTestHookStage1 localBuildInfo testFlags
+        innerHook a localBuildInfo b testFlags
+
+-- Cabal 1.22
+instance CustomTestHook (a -> b -> LocalBuildInfo -> c -> TestFlags -> IO ()) where
+    customTestHook innerHook a b localBuildInfo c testFlags = do
+        customTestHookStage1 localBuildInfo testFlags
+        innerHook a b localBuildInfo c testFlags
+
+customTestHookStage1 :: LocalBuildInfo -> TestFlags -> IO ()
+customTestHookStage1 LocalBuildInfo{..} testFlags = do
     let wantSIMD = fromMaybe True $ lookup (FlagName "simd") $ configConfigurationsFlags configFlags
         verbosity = fromFlag $ testVerbosity testFlags
 
@@ -129,8 +143,6 @@ customTestHook innerHook a b localBuildInfo@LocalBuildInfo{..} c testFlags = do
 
     when wantSIMD $
         rawSystemExit verbosity "make" ["-C", cbitsBuildDir, "--no-print-directory"]
-
-    innerHook a b localBuildInfo c testFlags
 
 mapBuildInfo :: (BuildInfo -> BuildInfo) -> PackageDescription -> PackageDescription
 mapBuildInfo f desc = desc { library = fmap (\l -> l { libBuildInfo = f (libBuildInfo l) }) (library desc)
