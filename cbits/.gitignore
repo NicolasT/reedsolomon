@@ -13,6 +13,7 @@ stamp-h1
 *.a
 
 reedsolomon-gal-mul-stdio
+reedsolomon-gal-mul-stdio.exe
 test-suite.log
 
 reedsolomon-*.tar.gz
