@@ -43,10 +43,13 @@ prop_equal runner1 runner2 low high dat = QCM.monadicIO $ do
     result1 <- QCM.run (runner1 low high dat)
     result2 <- QCM.run (runner2 low high dat)
 
-    let (exitCode1, _, _) = result1
+    let (exitCode1, stdout1, _) = result1
+        (exitCode2, stdout2, _) = result2
+
 
     QCM.assert (exitCode1 == ExitSuccess)
-    QCM.assert (result1 == result2)
+    QCM.assert (exitCode1 == exitCode2)
+    QCM.assert (stdout1 == stdout2)
 
 runner :: String -> Runner
 runner cmd (Word8x16 low) (Word8x16 high) (Data dat) = do

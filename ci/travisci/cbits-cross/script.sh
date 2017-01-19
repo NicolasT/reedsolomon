@@ -8,9 +8,11 @@ function build() {
     local cflags=$1
     shift
     local exec_suffix=$1
+    shift
+    local interpreter=$1
 
     set +e
-    ./configure --host=${host} CFLAGS=${cflags}
+    ./configure --host=${host} CFLAGS="${cflags}"
     RC=$?
     set -e
 
@@ -20,6 +22,9 @@ function build() {
     fi
 
     make reedsolomon-gal-mul-stdio${exec_suffix} V=1
+    if test "${interpreter}" != "NO_MAKE_CHECK"; then
+        INTERPRETER="${interpreter}" make check
+    fi
 
     mv reedsolomon-gal-mul-stdio${exec_suffix} reedsolomon-gal-mul-stdio-${suffix}${exec_suffix}
 
@@ -34,15 +39,15 @@ cd cbits
 
 HOST_ISA=`uname -p`
 
-build $HOST_ISA '' '' ''
-build arm arm-linux-gnueabihf '' ''
-build arm-neon arm-linux-gnueabihf '-mfpu=neon' ''
-build ppc64le powerpc64le-linux-gnu '-mno-altivec' ''
-build ppc64le-altivec powerpc64le-linux-gnu '-maltivec' ''
-build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8' ''
-build aarch64 aarch64-linux-gnu '' ''
-build x86_64-w64-mingw32 x86_64-w64-mingw32 '' '.exe'
-build i686-w64-mingw32 i686-w64-mingw32 '' '.exe'
+build $HOST_ISA '' '' '' ''
+build arm arm-linux-gnueabihf '' '' 'qemu-arm-static -L /usr/arm-linux-gnueabihf'
+build arm-neon arm-linux-gnueabihf '-mfpu=neon' '' 'qemu-arm-static -L /usr/arm-linux-gnueabihf'
+build ppc64le powerpc64le-linux-gnu '-mcpu=power6 -mno-altivec' '' 'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu'
+build ppc64le-altivec powerpc64le-linux-gnu '-mcpu=power6 -maltivec' '' 'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu'
+build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8' '' 'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu'
+build aarch64 aarch64-linux-gnu '' '' 'qemu-aarch64-static -L /usr/aarch64-linux-gnu'
+build x86_64-w64-mingw32 x86_64-w64-mingw32 '' '.exe' 'NO_MAKE_CHECK'
+build i686-w64-mingw32 i686-w64-mingw32 '' '.exe' 'NO_MAKE_CHECK'
 
 stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
@@ -53,10 +58,10 @@ stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
 
 stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
-    'qemu-ppc64le-static -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le'
+    'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le'
 stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
-    'qemu-ppc64le-static -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-altivec'
+    'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-altivec'
 stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-power8'

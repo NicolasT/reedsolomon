@@ -24,9 +24,10 @@ function do_test() {
         echo "#     SIZE=${SIZE}"
         echo "#     REFERENCE_OFFSET=${REFERENCE_OFFSET}"
         echo "#     output=${output}"
+        echo "#     INTERPRETER=${INTERPRETER:-}"
 
         set +e
-        ./reedsolomon-gal-mul-stdio -b "${lower_kind}" "${SIZE}" < "${INPUT}" > "${output}"
+        ${INTERPRETER:-} ./reedsolomon-gal-mul-stdio -b "${lower_kind}" "${SIZE}" < "${INPUT}" > "${output}"
         local RC=$?
         set -e
 
