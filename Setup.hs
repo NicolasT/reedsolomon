@@ -142,7 +142,7 @@ customTestHookStage1 LocalBuildInfo{..} testFlags = do
     let cbitsBuildDir = absBuildDir </> "cbits"
 
     when wantSIMD $
-        rawSystemExit verbosity "make" ["-C", cbitsBuildDir, "--no-print-directory"]
+        rawSystemExit verbosity "make" ["-C", cbitsBuildDir, "--no-print-directory", "check"]
 
 mapBuildInfo :: (BuildInfo -> BuildInfo) -> PackageDescription -> PackageDescription
 mapBuildInfo f desc = desc { library = fmap (\l -> l { libBuildInfo = f (libBuildInfo l) }) (library desc)
