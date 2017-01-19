@@ -26,6 +26,9 @@ function build() {
     make distclean
 }
 
+VALIDATE=$(dirname $0)/reedsolomon-gal-mul-stdio-quickcheck.hs
+test -f ${VALIDATE}
+
 unset CC
 cd cbits
 
@@ -41,22 +44,22 @@ build aarch64 aarch64-linux-gnu '' ''
 build x86_64-w64-mingw32 x86_64-w64-mingw32 '' '.exe'
 build i686-w64-mingw32 i686-w64-mingw32 '' '.exe'
 
-stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-arm-static -L /usr/arm-linux-gnueabihf ./reedsolomon-gal-mul-stdio-arm'
-stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-arm-static -L /usr/arm-linux-gnueabihf ./reedsolomon-gal-mul-stdio-arm-neon'
 
-stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-ppc64le-static -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le'
-stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-ppc64le-static -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-altivec'
-stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu ./reedsolomon-gal-mul-stdio-ppc64le-power8'
-stack runhaskell --resolver=$RESOLVER reedsolomon-gal-mul-stdio-quickcheck.hs -- \
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-aarch64-static -L /usr/aarch64-linux-gnu ./reedsolomon-gal-mul-stdio-aarch64'

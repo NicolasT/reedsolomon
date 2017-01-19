@@ -107,6 +107,5 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 		  $(top_srcdir)/build-aux/tap-driver.sh
 AM_TEST_LOG_FLAGS = $(SHELL) $(top_srcdir)/tests/run-test.sh
 
-EXTRA_DIST = tests/reedsolomon-gal-mul-stdio-quickcheck.hs \
-	     tests/run-test.sh \
+EXTRA_DIST = tests/run-test.sh \
 	     $(TESTS)
