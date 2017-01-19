@@ -192,7 +192,8 @@ static int parse_backend(const char *name, reedsolomon_cpu_support *id) {
 }
 
 int main(int argc, char **argv) {
-        int rc = 1;
+        int rc = 1,
+            opt = -1;
         size_t size = 0,
                cnt = 0;
         uint8_t *data = NULL,
@@ -203,10 +204,9 @@ int main(int argc, char **argv) {
         reedsolomon_cpu_support backend_id = REEDSOLOMON_CPU_GENERIC,
                                 supported = REEDSOLOMON_CPU_GENERIC;
         const char *backend = "native";
-        char c = 0;
 
-        while((c = getopt(argc, argv, "b:")) != -1) {
-                switch(c) {
+        while((opt = getopt(argc, argv, "b:")) != -1) {
+                switch(opt) {
                         case 'b':
                                 backend = optarg;
                                 break;
