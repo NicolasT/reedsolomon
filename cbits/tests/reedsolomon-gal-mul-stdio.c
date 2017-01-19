@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
         }
         if(impl == NULL) {
                 fprintf(stderr, "Failed to find requested implementation\n");
-                rc = 99;
+                rc = 77;
                 goto out;
         }
 
