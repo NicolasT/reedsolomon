@@ -33,7 +33,6 @@ Extra-Source-Files:  README.md
                    , cbits/src/reedsolomon.c
                    , cbits/src/reedsolomon.h
                    , cbits/src/reedsolomon-dispatch.c
-                   , cbits/lib/malloc.c
                    , cbits/tests/reedsolomon-gal-mul-stdio.c
                    , cbits/tests/run-test.sh
                    , cbits/tests/zeros.test
