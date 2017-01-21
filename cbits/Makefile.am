@@ -110,7 +110,7 @@ test_reedsolomon_gal_mul_xor_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 test_reedsolomon_gal_mul_xor_LDADD = $(reedsolomon_gal_mul_stdio_LDADD)
 test_reedsolomon_gal_mul_xor_LIBS = $(CODE_COVERAGE_LIBS)
 
-TESTS = test-reedsolomon-gal-mul-xor \
+ALL_TEST_CASES = \
 	tests/zeros.test \
 	tests/quickcheck-0.test \
 	tests/quickcheck-1.test \
@@ -217,5 +217,8 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 		  $(top_srcdir)/build-aux/tap-driver.sh
 AM_TEST_LOG_FLAGS = $(SHELL) $(top_srcdir)/tests/run-test.sh
 
+TESTS = test-reedsolomon-gal-mul-xor \
+	$(ALL_TEST_CASES)
+
 EXTRA_DIST = tests/run-test.sh \
-	     $(TESTS)
+	     $(ALL_TEST_CASES)
