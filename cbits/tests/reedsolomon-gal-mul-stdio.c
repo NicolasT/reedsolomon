@@ -71,7 +71,10 @@
 static void * my_aligned_alloc(size_t alignment, size_t size);
 static void my_aligned_free(void *ptr);
 
-#ifdef HAVE_POSIX_MEMALIGN
+#if defined(HAVE_POSIX_MEMALIGN) && HAVE_POSIX_MEMALIGN \
+        && defined(HAVE_ERRNO_H) && HAVE_ERRNO_H
+# include <errno.h>
+
 static void * my_aligned_alloc(size_t alignment, size_t size) {
         void *result = NULL;
         int rc = 0;

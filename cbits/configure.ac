@@ -255,8 +255,9 @@ AC_DEFINE_UNQUOTED(
 
 # Checks for library functions.
 AC_CHECK_FUNCS([strcasecmp])
+AC_CHECK_HEADERS([errno.h])
 AC_CHECK_FUNCS([posix_memalign])
-AC_CHECK_HEADERS([mm_malloc.h errno.h])
+AC_CHECK_HEADERS([mm_malloc.h])
 AC_CHECK_DECLS([_mm_malloc, _mm_free], [], [], [#include <mm_malloc.h>])
 AC_CHECK_DECLS(
     [[__get_cpuid_count(const unsigned int, const unsigned int, unsigned int *, unsigned int *, unsigned int *, unsigned int *)]],
