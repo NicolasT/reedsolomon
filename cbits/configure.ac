@@ -13,7 +13,6 @@ AC_INIT([reedsolomon],
 AC_REVISION(m4_esyscmd_s([git describe --always --long --dirty]))
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/reedsolomon.h])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
@@ -255,8 +254,10 @@ AC_DEFINE_UNQUOTED(
     [Define to 1 if vec_vsrd works])
 
 # Checks for library functions.
-AC_FUNC_MALLOC
 AC_CHECK_FUNCS([strcasecmp])
+AC_CHECK_FUNCS([posix_memalign])
+AC_CHECK_HEADERS([mm_malloc.h errno.h])
+AC_CHECK_DECLS([_mm_malloc, _mm_free], [], [], [#include <mm_malloc.h>])
 AC_CHECK_DECLS(
     [[__get_cpuid_count(const unsigned int, const unsigned int, unsigned int *, unsigned int *, unsigned int *, unsigned int *)]],
     [],

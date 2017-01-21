@@ -56,6 +56,77 @@
 # endif
 #endif
 
+/* We need some kind of aligned memory allocation routine when allocating the
+ * input and output buffers of the `reedsolomon_gal_mul` invocation, because
+ * these are supposed to be aligned up to RS_ASSUMED_ALIGNMENT.
+ * On most platforms, using `malloc` works out just fine because it always
+ * returns a 16-byte aligned address. On Win32 though this is not the case,
+ * easily reproduced through Wine. When passing a buffer into
+ * `reedsolomon_gal_mul` which is not properly aligned, this causes segfaults
+ * because we use 'aligned' SIMD load and store instructions.
+ *
+ * There's no real cross-platform way of doing aligned allocations, hence this
+ * work-around.
+ */
+static void * my_aligned_alloc(size_t alignment, size_t size);
+static void my_aligned_free(void *ptr);
+
+#ifdef HAVE_POSIX_MEMALIGN
+static void * my_aligned_alloc(size_t alignment, size_t size) {
+        void *result = NULL;
+        int rc = 0;
+
+        if(size == 0) {
+                size = 1;
+        }
+
+        rc = posix_memalign(&result, alignment, size);
+        if(rc != 0) {
+                errno = rc;
+                /* Be safe:
+                 *
+                 * > On Linux (and other systems), posix_memalign() does not
+                 * > modify memptr on failure .  A requirement standardizing
+                 * > this behavior was added in POSIX.1-2016.
+                 */
+                result = NULL;
+        }
+
+        return result;
+}
+
+static void my_aligned_free(void *ptr) {
+        free(ptr);
+}
+#elif defined(HAVE_MM_MALLOC_H) && HAVE_MM_MALLOC_H \
+        && defined(HAVE_DECL__MM_MALLOC) && HAVE_DECL__MM_MALLOC \
+        && defined(HAVE_DECL__MM_FREE) && HAVE_DECL__MM_FREE \
+        && defined(HAVE_ERRNO_H) && HAVE_ERRNO_H
+# include <errno.h>
+# include <mm_malloc.h>
+
+static void * my_aligned_alloc(size_t alignment, size_t size) {
+        void *result = NULL;
+
+        if(size == 0) {
+                size = 1;
+        }
+
+        result = _mm_malloc(size, alignment);
+        if(result == NULL) {
+                errno = ENOMEM;
+        }
+
+        return result;
+}
+
+static void my_aligned_free(void *ptr) {
+        _mm_free(ptr);
+}
+#else
+# error No suitable aligned allocation routine available
+#endif
+
 static int read_all(const int fd, uint8_t *vec, size_t count) {
         ssize_t rc = 0;
 
@@ -294,9 +365,9 @@ int main(int argc, char **argv) {
                 goto out;
         }
 
-        data = malloc(size);
+        data = my_aligned_alloc(RS_ASSUMED_ALIGNMENT, size);
         if(data == NULL) {
-                perror("malloc");
+                perror("my_aligned_alloc");
                 rc = 99;
                 goto out;
         }
@@ -307,9 +378,9 @@ int main(int argc, char **argv) {
                 goto out;
         }
 
-        out = malloc(size);
+        out = my_aligned_alloc(RS_ASSUMED_ALIGNMENT, size);
         if(out == NULL) {
-                perror("malloc");
+                perror("my_aligned_alloc");
                 rc = 99;
                 goto out;
         }
@@ -330,8 +401,8 @@ int main(int argc, char **argv) {
         rc = 0;
 
 out:
-        free(data);
-        free(out);
+        my_aligned_free(data);
+        my_aligned_free(out);
 
         return rc;
 }
