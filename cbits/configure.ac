@@ -18,7 +18,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/reedsolomon.h])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
-AM_INIT_AUTOMAKE([1.11 foreign subdir-objects -Wall -Werror])
+AM_INIT_AUTOMAKE([1.12 foreign subdir-objects -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
