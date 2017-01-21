@@ -21,7 +21,6 @@ dependencies:
 
 test:
   override:
-    - cd cbits/build-aux; wget -O tap-driver.sh "http://git.savannah.gnu.org/cgit/automake.git/plain/lib/tap-driver.sh?h=v1.15&id=db43dd473361d90d8b00362cfef5bac8e722000d"; chmod a+x tap-driver.sh
     - cd cbits; autoreconf -vi
     - cabal build
     - cabal test --show-details=always --test-options="+RTS -N2"
