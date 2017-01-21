@@ -10,9 +10,8 @@ machine:
 
 dependencies:
   pre:
-    - sudo add-apt-repository ppa:dns/gnu
     - sudo apt-get update
-    - sudo apt-get install hscolour automake1.12
+    - sudo apt-get install hscolour
 
   override:
     - cabal update
