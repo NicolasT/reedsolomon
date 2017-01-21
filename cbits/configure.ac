@@ -48,6 +48,7 @@ AC_C_RESTRICT
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 AC_TYPE_UINT8_T
+AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
 ## Checks for supported function attributes.
