@@ -4,6 +4,11 @@ sudo apt-get -y install libc6-ppc64el-cross libc6-dev-ppc64el-cross \
                         libc6-arm64-cross libc6-dev-arm64-cross \
                         gcc-mingw-w64-i686 gcc-mingw-w64-x86-64
 
+# For Wine to install
+sudo dpkg --add-architecture i386
+sudo apt-get update
+sudo apt-get -y install wine
+
 mkdir -p $LOCAL_BIN
 
 curl -L https://www.stackage.org/stack/$TRAVIS_OS_NAME-x86_64 | \

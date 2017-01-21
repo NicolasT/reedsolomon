@@ -22,9 +22,7 @@ function build() {
     fi
 
     make reedsolomon-gal-mul-stdio${exec_suffix} V=1
-    if test "${interpreter}" != "NO_MAKE_CHECK"; then
-        INTERPRETER="${interpreter}" make check
-    fi
+    INTERPRETER="${interpreter}" make check
 
     mv reedsolomon-gal-mul-stdio${exec_suffix} reedsolomon-gal-mul-stdio-${suffix}${exec_suffix}
 
@@ -46,8 +44,8 @@ build ppc64le powerpc64le-linux-gnu '-mcpu=power6 -mno-altivec' '' 'qemu-ppc64le
 build ppc64le-altivec powerpc64le-linux-gnu '-mcpu=power6 -maltivec' '' 'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu'
 build ppc64le-power8 powerpc64le-linux-gnu '-mcpu=power8' '' 'qemu-ppc64le-static -cpu POWER8 -L /usr/powerpc64le-linux-gnu'
 build aarch64 aarch64-linux-gnu '' '' 'qemu-aarch64-static -L /usr/aarch64-linux-gnu'
-build x86_64-w64-mingw32 x86_64-w64-mingw32 '' '.exe' 'NO_MAKE_CHECK'
-build i686-w64-mingw32 i686-w64-mingw32 '' '.exe' 'NO_MAKE_CHECK'
+build x86_64-w64-mingw32 x86_64-w64-mingw32 '' '.exe' 'wine'
+build i686-w64-mingw32 i686-w64-mingw32 '' '.exe' 'wine'
 
 stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
