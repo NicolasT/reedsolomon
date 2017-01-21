@@ -34,6 +34,7 @@ Extra-Source-Files:  README.md
                    , cbits/src/reedsolomon.h
                    , cbits/src/reedsolomon-dispatch.c
                    , cbits/tests/reedsolomon-gal-mul-stdio.c
+                   , cbits/tests/test-reedsolomon-gal-mul-xor.c
                    , cbits/tests/run-test.sh
                    , cbits/tests/zeros.test
                    , cbits/tests/quickcheck-0.test
