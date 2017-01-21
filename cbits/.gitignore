@@ -17,3 +17,8 @@ reedsolomon-gal-mul-stdio.exe
 test-suite.log
 
 reedsolomon-*.tar.gz
+
+*.gcda
+*.gcno
+reedsolomon-*-coverage.info
+reedsolomon-*-coverage/
