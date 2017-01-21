@@ -71,11 +71,12 @@ libreedsolomon_altivec_a_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 noinst_LIBRARIES += libreedsolomon-altivec.a
 endif
 
-check_PROGRAMS = reedsolomon-gal-mul-stdio
+check_PROGRAMS = reedsolomon-gal-mul-stdio \
+		 test-reedsolomon-gal-mul-xor
 reedsolomon_gal_mul_stdio_SOURCES = tests/reedsolomon-gal-mul-stdio.c
-reedsolomon_gal_mul_stdio_CPPFLAGS = $(CODE_COVERAGE_CPPFLAGS)
-reedsolomon_gal_mul_stdio_CFLAGS = -I$(top_srcdir)/src \
-				   $(CODE_COVERAGE_CFLAGS)
+reedsolomon_gal_mul_stdio_CPPFLAGS = -I$(top_srcdir)/src \
+				     $(CODE_COVERAGE_CPPFLAGS)
+reedsolomon_gal_mul_stdio_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 reedsolomon_gal_mul_stdio_LDADD = libreedsolomon.a \
 				  $(LIBOBJS)
 reedsolomon_gal_mul_stdio_LIBS = $(CODE_COVERAGE_LIBS)
@@ -102,7 +103,15 @@ if RS_HAVE_ALTIVEC
 reedsolomon_gal_mul_stdio_LDADD += libreedsolomon-altivec.a
 endif
 
-TESTS = tests/zeros.test \
+test_reedsolomon_gal_mul_xor_SOURCES = tests/test-reedsolomon-gal-mul-xor.c
+test_reedsolomon_gal_mul_xor_CPPFLAGS = -I$(top_srcdir)/src \
+					$(CODE_COVERAGE_CPPFLAGS)
+test_reedsolomon_gal_mul_xor_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+test_reedsolomon_gal_mul_xor_LDADD = $(reedsolomon_gal_mul_stdio_LDADD)
+test_reedsolomon_gal_mul_xor_LIBS = $(CODE_COVERAGE_LIBS)
+
+TESTS = test-reedsolomon-gal-mul-xor \
+	tests/zeros.test \
 	tests/quickcheck-0.test \
 	tests/quickcheck-1.test \
 	tests/quickcheck-2.test \

@@ -14,6 +14,9 @@ stamp-h1
 
 reedsolomon-gal-mul-stdio
 reedsolomon-gal-mul-stdio.exe
+test-reedsolomon-gal-mul-xor
+test-reedsolomon-gal-mul-xor.log
+test-reedsolomon-gal-mul-xor.trs
 test-suite.log
 
 reedsolomon-*.tar.gz

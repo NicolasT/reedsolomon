@@ -6,3 +6,4 @@ depcomp
 install-sh
 missing
 tap-driver.sh
+test-driver

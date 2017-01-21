@@ -149,6 +149,7 @@ Extra-Source-Files:  README.md
                    , cbits/build-aux/install-sh
                    , cbits/build-aux/missing
                    , cbits/build-aux/tap-driver.sh
+                   , cbits/build-aux/test-driver
 Cabal-Version:       >=1.10
 
 Flag SIMD
