@@ -213,9 +213,12 @@ ALL_TEST_CASES = \
 	tests/quickcheck-98.test \
 	tests/quickcheck-99.test
 
-TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
-		  $(top_srcdir)/build-aux/tap-driver.sh
+TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' \
+		  INTERPRETER='$(INTERPRETER)' \
+		  $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
 AM_TEST_LOG_FLAGS = $(SHELL) $(top_srcdir)/tests/run-test.sh
+
+LOG_COMPILER = $(INTERPRETER)
 
 TESTS = test-reedsolomon-gal-mul-xor \
 	$(ALL_TEST_CASES)

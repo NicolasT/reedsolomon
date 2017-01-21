@@ -326,6 +326,9 @@ AC_DEFINE_UNQUOTED(
 AS_IF([test x$PACKAGE_VERSION = x999],
       AX_APPEND_COMPILE_FLAGS([-Werror]))
 
+AC_ARG_VAR([INTERPRETER], dnl
+    [Interpreter to use when running test executables, e.g. 'qemu-aarch64' or 'wine'])
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
