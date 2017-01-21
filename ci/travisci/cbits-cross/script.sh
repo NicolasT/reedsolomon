@@ -12,7 +12,7 @@ function build() {
     local interpreter=$1
 
     set +e
-    ./configure --host=${host} CFLAGS="${cflags}"
+    ./configure --host=${host} CFLAGS="${cflags}" INTERPRETER="${interpreter}"
     RC=$?
     set -e
 
@@ -22,7 +22,7 @@ function build() {
     fi
 
     make reedsolomon-gal-mul-stdio${exec_suffix} V=1
-    INTERPRETER="${interpreter}" make check
+    make check
 
     mv reedsolomon-gal-mul-stdio${exec_suffix} reedsolomon-gal-mul-stdio-${suffix}${exec_suffix}
 
@@ -66,3 +66,10 @@ stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
 stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
     ./reedsolomon-gal-mul-stdio-$HOST_ISA \
     'qemu-aarch64-static -L /usr/aarch64-linux-gnu ./reedsolomon-gal-mul-stdio-aarch64'
+
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
+    ./reedsolomon-gal-mul-stdio-$HOST_ISA \
+    'wine ./reedsolomon-gal-mul-stdio-x86_64-w64-mingw32.exe'
+stack runhaskell --resolver=$RESOLVER ${VALIDATE} -- \
+    ./reedsolomon-gal-mul-stdio-$HOST_ISA \
+    'wine ./reedsolomon-gal-mul-stdio-i686-w64-mingw32.exe'
