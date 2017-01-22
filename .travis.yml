@@ -7,6 +7,11 @@ branches:
 
 matrix:
   include:
+    - env: SUITE=cbits-cross RESOLVER=lts-7
+    # Current nightly uses GHC 8.0.x
+    - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.7
+    - env: SUITE=build-test-bench RESOLVER=lts-7
+      os: osx
     # Stackage LTS-2 uses GHC 7.8.x, which relies on LLVM 3.4
     - env: SUITE=build-test-bench RESOLVER=lts-2
     # Stackage LTS-3 uses GHC-7.10.2, which relies on LLVM 3.5
@@ -17,11 +22,6 @@ matrix:
     - env: SUITE=build-test-bench RESOLVER=lts-6 LLVM_VERSION=3.5
     # Stackage lts-7 uses GHC-8.0.1 which relies on LLVM 3.7
     - env: SUITE=build-test-bench RESOLVER=lts-7 LLVM_VERSION=3.7
-    # Current nightly uses GHC 8.0.x
-    - env: SUITE=build-test-bench RESOLVER=nightly LLVM_VERSION=3.7
-    - env: SUITE=build-test-bench RESOLVER=lts-7
-      os: osx
-    - env: SUITE=cbits-cross RESOLVER=lts-7
     - env: SUITE=check-sdist
 
 sudo: required
