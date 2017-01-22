@@ -61,6 +61,7 @@ AX_GCC_FUNC_ATTRIBUTE([const])
 AX_GCC_FUNC_ATTRIBUTE([hot])
 AX_GCC_FUNC_ATTRIBUTE([ifunc])
 AX_GCC_FUNC_ATTRIBUTE([force_align_arg_pointer])
+AX_GCC_VAR_ATTRIBUTE([aligned])
 _AC_LANG_PREFIX[]FLAGS=$rs_gcc_func_attribute_save_flags
 
 ## Checks for supported generic compiler options.

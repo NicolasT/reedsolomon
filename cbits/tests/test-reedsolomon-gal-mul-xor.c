@@ -2,10 +2,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include "reedsolomon.h"
 
 #define LEN (64)
 #define SEED (42)
+
+#if defined(HAVE_VAR_ATTRIBUTE_ALIGNED) && HAVE_VAR_ATTRIBUTE_ALIGNED
+# define ALIGN __attribute__((aligned(RS_ASSUMED_ALIGNMENT)))
+#else
+# warning No variable alignment attribute support, subtle test failures may arise
+# define ALIGN
+#endif
 
 /* Simple Lehmer PRNG */
 static inline uint32_t next(uint32_t rnd) {
@@ -28,12 +38,12 @@ static uint32_t fill_random(void *ptr, size_t len, uint32_t seed) {
 }
 
 int main() {
-        uint8_t low[16] = { 0 },
-                high[16] = { 0 },
-                data[LEN] = { 0 },
-                out[LEN] = { 0 },
-                initial_out[LEN] = { 0 },
-                out_xor[LEN];
+        uint8_t low[16] ALIGN = { 0 },
+                high[16] ALIGN = { 0 },
+                data[LEN] ALIGN = { 0 },
+                out[LEN] ALIGN = { 0 },
+                initial_out[LEN] ALIGN = { 0 },
+                out_xor[LEN] ALIGN;
         size_t size = 0,
                idx = 0;
         int rc = 1;
